@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.YOUR_NAME.wakeup_and_text</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>bash</string>
+        <string>-c</string>
+        <string>
+            cd REPO_ROOT;
+            ABSOLUTE_PYTHON_PATH extra_features/sync_notes/sync_notes.py &gt;&gt; OUTPUT_PATH;
+            ABSOLUTE_PYTHON_PATH send_scheduled_messages.py &gt;&gt; OUTPUT_PATH;
+            idle_time=$(ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print $NF/1000000000; exit}');
+            idle_threshold=10
+            if (( $(echo "$idle_time &gt;&gt; $idle_threshold" | bc -l) )); then
+                echo "The system is idle...going back to sleep in WAKE_BUFFER_TIME seconds." &gt;&gt; OUTPUT_PATH;
+                sleep WAKE_BUFFER_TIME
+                pmset sleepnow
+            fi
+        </string>
+    </array>
+    <key>StartInterval</key>
+    <integer>WAKE_FREQUENCY</integer>
+</dict>
+</plist>
