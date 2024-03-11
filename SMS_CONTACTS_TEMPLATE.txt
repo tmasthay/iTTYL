@@ -1,0 +1,4 @@
+my_android_friend
+my_other_android_friend
+sms_me
+some_group_chat_that_has_at_least_one_android_user
