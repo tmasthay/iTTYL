@@ -15,6 +15,7 @@ echo "Starting the script with sleep duration of $SLEEP_DURATION_MINUTES minutes
 for (( i=1; i<=ITERATIONS; i++ ))
 do
     echo "Iteration $i of $ITERATIONS of $SLEEP_DURATION_MINUTES minutes each"
+    python tmp.py
     python send_scheduled_messages.py
     # If not the last iteration, then sleep
     if [ $i -lt $ITERATIONS ]; then

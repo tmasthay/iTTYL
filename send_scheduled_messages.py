@@ -21,6 +21,9 @@ SCHEDULED_TEXTS_DIRECTORY = env_vars["SCHEDULED_TEXTS_DIRECTORY"]
 TEXT_FILENAME_PATTERN = re.compile(r"^text.*\.(txt|md)$", re.IGNORECASE)
 SEND_IMESSAGE_SCRIPT_PATH = "./send_imessage.applescript"
 SEND_SMS_SCRIPT_PATH = "./send_sms.applescript"
+SEND_GROUP_IMESSAGE_SCRIPT_PATH = (
+    "./extra_features/group_chats/send_group_chat.applescript"
+)
 
 
 def parse_human_datetime(human_datetime):
@@ -68,7 +71,10 @@ def parse_recipient_from_filename(filename):
 
 def get_recipient_number_from_filename(contact_name):
     try:
-        return env_vars[contact_name].lower()
+        recipient = env_vars[contact_name].lower()
+        if recipient.startswith("chat"):
+            recipient = f"imessage;+;{recipient}"
+        return recipient
     except KeyError:
         raise ValueError(
             f"Error: contact name '{contact_name}' not declared in settings file."
@@ -77,6 +83,10 @@ def get_recipient_number_from_filename(contact_name):
 
 def is_sms_recipient(recipient):
     return recipient.split("_")[0] == "sms"
+
+
+def is_group_chat_recipient(phone_number):
+    return phone_number.startswith("imessage;+;chat")
 
 
 def send_message(file):
@@ -91,15 +101,31 @@ def send_message(file):
     if is_sms_recipient(contact_name):
         try:
             subprocess.run(
-                ["osascript", SEND_SMS_SCRIPT_PATH, recipient, message], check=True
+                ["osascript", SEND_SMS_SCRIPT_PATH, recipient, message],
+                check=True,
             )
             move_file_to_sent_directory(file.name)
         except subprocess.CalledProcessError as e:
             print("error sending SMS:", e)
+    elif is_group_chat_recipient(recipient):
+        try:
+            subprocess.run(
+                [
+                    "osascript",
+                    SEND_GROUP_IMESSAGE_SCRIPT_PATH,
+                    f'"{recipient}"',
+                    message,
+                ],
+                check=True,
+            )
+            move_file_to_sent_directory(file.name)
+        except subprocess.CalledProcessError as e:
+            print("error sending group iMessage:", e)
     else:
         try:
             subprocess.run(
-                ["osascript", SEND_IMESSAGE_SCRIPT_PATH, recipient, message], check=True
+                ["osascript", SEND_IMESSAGE_SCRIPT_PATH, recipient, message],
+                check=True,
             )
             move_file_to_sent_directory(file.name)
         except subprocess.CalledProcessError as e:
@@ -110,7 +136,9 @@ def send_messages(directory):
     files = []
     for file_path in glob.glob(os.path.join(directory, "*")):
         filename = os.path.basename(file_path)
-        if TEXT_FILENAME_PATTERN.match(filename) and file_ready_to_be_sent(filename):
+        if TEXT_FILENAME_PATTERN.match(filename) and file_ready_to_be_sent(
+            filename
+        ):
             with open(file_path, "r", encoding="utf-8") as file:
                 send_message(file)
 
