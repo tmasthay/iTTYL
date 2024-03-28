@@ -14,7 +14,7 @@ tell application "Messages"
                 set participantInfo to participantInfo & id of aParticipant & "\n    "
             end repeat
             -- Add a newline for better readability between group chats
-            set participantInfo to participantInfo & "\n"
+            set participantInfo to participantInfo & "\n\n"
         end if
     end repeat
     

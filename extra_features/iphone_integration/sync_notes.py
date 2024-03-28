@@ -41,7 +41,7 @@ def main():
         ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
         header = lines[1].strip()
         if not header.startswith('Text '):
-            header[0] = header[0].lower()
+            header = header[0].lower() + header[1:]
             header = 'Text ' + header
         body = '\n'.join(lines[2:])
 

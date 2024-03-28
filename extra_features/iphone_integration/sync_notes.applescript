@@ -2,7 +2,8 @@ tell application "Notes"
     -- Get a reference to the specific 'Texts' subfolder in iCloud
     set textsFolder to folder "Texts" of account "iCloud"
     -- Search for notes within the 'Texts' folder only
-    set searchResults to notes of textsFolder whose name contains "Text"
+    -- set searchResults to notes of textsFolder whose name contains "Text"
+    set searchResults to notes of textsFolder
     
     -- Get a reference to the 'Sent' subfolder in iCloud where notes will be moved
     set sentFolder to folder "Sent" of account "iCloud"
