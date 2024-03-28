@@ -40,6 +40,9 @@ def main():
         last_modified = ' '.join(last_modified).replace('at ', '')
         ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
         header = lines[1].strip()
+        if not header.startswith('Text '):
+            header[0] = header[0].lower()
+            header = 'Text ' + header
         body = '\n'.join(lines[2:])
 
         time_mode = header.split(' ')[-1]
