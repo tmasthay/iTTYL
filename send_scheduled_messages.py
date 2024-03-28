@@ -98,7 +98,9 @@ def send_message(file):
         move_file_to_sent_directory(file.name)
         return
 
+    print(f'Recipient={recipient}')
     if is_sms_recipient(contact_name):
+        print('SMS branch chosen (shouldnt happend)')
         try:
             subprocess.run(
                 ["osascript", SEND_SMS_SCRIPT_PATH, recipient, message],
@@ -108,20 +110,28 @@ def send_message(file):
         except subprocess.CalledProcessError as e:
             print("error sending SMS:", e)
     elif is_group_chat_recipient(recipient):
+        print('Group chat branch chosen')
+        cmd = f"osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} '{recipient}' '{message}'"
+        print(cmd)
         try:
-            subprocess.run(
-                [
-                    "osascript",
-                    SEND_GROUP_IMESSAGE_SCRIPT_PATH,
-                    f'"{recipient}"',
-                    message,
-                ],
-                check=True,
-            )
+            # subprocess.run(
+            #     [
+            #         "osascript",
+            #         SEND_GROUP_IMESSAGE_SCRIPT_PATH,
+            #         f"'{recipient}'",
+            #         f"'message'",
+            #     ],
+            #     check=True,
+            # )
+            # obviously not ideal for security reasons but it works
+            #     I'm misinterpreting something with subprocess.run.
+            #     Key is that I need to protect shell expansion of the recipient and message variables.
+            subprocess.check_output(cmd, shell=True)
             move_file_to_sent_directory(file.name)
         except subprocess.CalledProcessError as e:
             print("error sending group iMessage:", e)
     else:
+        print('regular iMessage branch chosen')
         try:
             subprocess.run(
                 ["osascript", SEND_IMESSAGE_SCRIPT_PATH, recipient, message],
