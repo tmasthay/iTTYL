@@ -24,7 +24,9 @@ def str_to_timedelta(s):
 
 
 def main():
-    u = co('./test.sh', shell=True).decode('utf-8')
+    u = co(
+        './extra_features/iphone_integration/sync_notes.sh', shell=True
+    ).decode('utf-8')
     u = u.replace('\u202f', ' ')
 
     texts = u.strip().split(DEMARK)[1:]
