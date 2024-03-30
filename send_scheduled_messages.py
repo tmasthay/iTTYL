@@ -110,9 +110,7 @@ def send_message(file):
         except subprocess.CalledProcessError as e:
             print("error sending SMS:", e)
     elif is_group_chat_recipient(recipient):
-        print('Group chat branch chosen')
         cmd = f"osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} '{recipient}' '{message}'"
-        print(cmd)
         try:
             # subprocess.run(
             #     [

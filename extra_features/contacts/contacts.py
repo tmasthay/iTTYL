@@ -2,6 +2,10 @@ import os
 import re
 import argparse
 
+PROJECT_PATH = os.path.abspath(
+    os.path.relpath(os.path.dirname(__file__), os.getcwd())
+)
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -23,18 +27,27 @@ def parse_args():
         help='Sort contacts alphabetically',
         action='store_true',
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.input.startswith(os.sep):
+        args.input = os.path.join(PROJECT_PATH, args.input)
+    if not args.output.startswith(os.sep):
+        args.output = os.path.join(PROJECT_PATH, args.output)
+    return args
 
 
 def main():
     args = parse_args()
     if args.regenerate or not os.path.exists(args.input):
         print(
-            f'Regenerating base contacts and storing in {args.input}...may take a minute or two...',
+            f'Regenerating base contacts and storing in file below'
+            f'\n\n    {args.input}\n\n'
+            'This may take a minute or two...',
             end='',
             flush=True,
         )
-        os.system(f'osascript see_contacts.applescript > {args.input}')
+        os.system(
+            f'osascript {PROJECT_PATH}/see_contacts.applescript > {args.input}'
+        )
         print('Done')
     with open(args.input, 'r') as f:
         lines = f.read().strip().split('\n')
@@ -60,16 +73,24 @@ def main():
         if args.alphabetical:
             lines.sort(key=lambda x: x.split(': ')[0])
 
-        with open(args.output, 'w') as f:
-            s = '\n'.join(lines)
-            ext = args.output[args.output.rfind('.') :].lower()
-            if ext not in ['.yaml', '.yml', '.txt', '.env']:
-                raise ValueError(
-                    f'Invalid file extension: {ext}...must be .yaml, .yml, .txt, or .env'
+        try:
+            with open(args.output, 'w') as f:
+                s = '\n'.join(lines)
+                ext = args.output[args.output.rfind('.') :].lower()
+                if ext not in ['.yaml', '.yml', '.txt', '.env']:
+                    raise ValueError(
+                        f'Invalid file extension: {ext}...must be .yaml, .yml, .txt, or .env'
+                    )
+                elif ext in ['.txt', '.env']:
+                    s = s.replace(': ', '=')
+                f.write(s)
+                print(
+                    f'YAML contacts to env contacts format conversion complete.\n'
+                    'Copy and paste the contacts you want from the file below into the SETTINGS.txt file.\n\n'
+                    f'    {args.output}\n'
                 )
-            elif ext in ['.txt', '.env']:
-                s = s.replace(': ', '=')
-            f.write(s)
+        except Exception as e:
+            print(f'Error writing to contacts file: {e}')
 
 
 if __name__ == "__main__":

@@ -1,0 +1,26 @@
+addon(){
+    local name=$1
+
+    # check if name is either "-h" or "--help"
+    if [ "$name" = "-h" ] || [ "$name" = "--help" ]; then
+        avail_addons=$(ls extra_features)
+
+        #split avail_addons by newline, indenting by 6 spaces
+        avail_addons=$(echo $avail_addons | sed 's/ /\n      /g')
+
+        #prepend a newline to avail_addons
+        avail_addons="      $avail_addons"
+
+        echo "Usage: addon <name> [args]"
+        echo "  name: name of the addon"
+        echo "    available addons:"
+        echo "$avail_addons"
+        echo "  args: arguments to forward to the addon"
+        return
+    fi
+    
+    # args to forward to the addon
+    shift
+
+    python extra_features/$name/$name.py $@
+}

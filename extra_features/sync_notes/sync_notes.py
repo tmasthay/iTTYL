@@ -9,6 +9,10 @@ SCHEDULED_TEXTS_DIRECTORY = [
     if e.startswith('SCHEDULED_TEXTS_DIRECTORY')
 ][0].split('=')[1]
 
+PROJECT_PATH = os.path.abspath(
+    os.path.relpath(os.path.dirname(__file__), os.getcwd())
+)
+
 
 def str_to_timedelta(s):
     if ':' in s:
@@ -24,9 +28,7 @@ def str_to_timedelta(s):
 
 
 def main():
-    u = co(
-        './extra_features/iphone_integration/sync_notes.sh', shell=True
-    ).decode('utf-8')
+    u = co(f'{PROJECT_PATH}/sync_notes.sh', shell=True).decode('utf-8')
     u = u.replace('\u202f', ' ')
 
     texts = u.strip().split(DEMARK)[1:]
@@ -37,35 +39,27 @@ def main():
     for i, text in enumerate(texts):
         lines = text.split('\n')
         last_modified = lines[0].split(' ')[2:]
-        input(f'Last modified = {last_modified}')
         last_modified = ' '.join(last_modified).replace('at ', '')
         ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
         header = lines[1].strip()
-        input(header)
         if not header.startswith('Text '):
             header = header[0].lower() + header[1:]
             header = 'Text ' + header
-            input(header)
         body = '\n'.join(lines[2:])
 
         time_mode = header.split(' ')[-1]
 
         header_meat = " ".join(header.split(" ")[:-1]).strip()
 
-        input(time_mode)
-        input(header_meat)
         if time_mode.lower() == 'now':
             scheduled_time = ref_time.strftime('%B %d, %Y %I:%M:%S %p')
-            input(scheduled_time)
             header = f'{header_meat} {scheduled_time}'
-            input(header)
         if time_mode[0] == '+':
             delta = str_to_timedelta(time_mode[1:])
             scheduled_time = (ref_time + delta).strftime(
                 '%B %d, %Y %I:%M:%S %p'
             )
             header = f'{header_meat} {scheduled_time}'
-        input(header)
 
         filename = f'{header}.txt'
         path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, filename)
