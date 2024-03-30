@@ -1,3 +1,5 @@
+alias cdsc="cd $(pwd)"
+
 addon(){
     local name=$1
 
@@ -22,5 +24,10 @@ addon(){
     # args to forward to the addon
     shift
 
+    cdsc
     python extra_features/$name/$name.py $@
+    cd $OLDPWD
 }
+
+
+

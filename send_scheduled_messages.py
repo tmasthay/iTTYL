@@ -6,6 +6,8 @@ from dateutil import parser
 import shutil
 import re
 from dotenv import dotenv_values
+import traceback
+import sys
 
 DOTENV_SETTINGS_PATH = "./SETTINGS.txt"
 env_vars = dotenv_values(DOTENV_SETTINGS_PATH)
@@ -24,6 +26,27 @@ SEND_SMS_SCRIPT_PATH = "./send_sms.applescript"
 SEND_GROUP_IMESSAGE_SCRIPT_PATH = (
     "./extra_features/group_chats/send_group_chat.applescript"
 )
+
+f = open('/tmp/send_debug.txt', 'a')
+pr = lambda *args, **kwargs: print(*args, **kwargs, file=f, flush=True)
+
+
+def eat_images(s):
+    # return s, ''
+    lines = s.split('\n')
+    image_paths = []
+    processed_lines = []
+    for line in lines:
+        if line.startswith('@@@IMG') and line.endswith('@@@'):
+            path = line[7:-3].strip()
+            image_paths.append(path)
+        else:
+            processed_lines.append(line)
+    processed_s = '\n'.join(processed_lines)
+    processed_paths = ','.join(image_paths)
+    pr(f'{processed_s=}')
+    pr(f'{processed_paths=}')
+    return processed_s, processed_paths
 
 
 def parse_human_datetime(human_datetime):
@@ -90,65 +113,89 @@ def is_group_chat_recipient(phone_number):
 
 
 def send_message(file):
-    contact_name = parse_recipient_from_filename(file.name)
-    recipient = get_recipient_number_from_filename(contact_name)
-    message = file.read()
-    if DEBUG_TEXTING:
-        print(f"DEBUG TEXTING MODE: Would send {recipient}: {message}")
-        move_file_to_sent_directory(file.name)
-        return
+    try:
+        contact_name = parse_recipient_from_filename(file.name)
+        recipient = get_recipient_number_from_filename(contact_name)
+        message = file.read()
+        print('PRE-EAT')
+        message, images = eat_images(message)
+        print(f'POST-EAT: {message=}, {images=}')
+        if DEBUG_TEXTING:
+            print(f"DEBUG TEXTING MODE: Would send {recipient}: {message}")
+            move_file_to_sent_directory(file.name)
+            return
 
-    print(f'Recipient={recipient}')
-    if is_sms_recipient(contact_name):
-        print('SMS branch chosen (shouldnt happend)')
-        try:
-            subprocess.run(
-                ["osascript", SEND_SMS_SCRIPT_PATH, recipient, message],
-                check=True,
-            )
-            move_file_to_sent_directory(file.name)
-        except subprocess.CalledProcessError as e:
-            print("error sending SMS:", e)
-    elif is_group_chat_recipient(recipient):
-        cmd = f"osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} '{recipient}' '{message}'"
-        try:
-            # subprocess.run(
-            #     [
-            #         "osascript",
-            #         SEND_GROUP_IMESSAGE_SCRIPT_PATH,
-            #         f"'{recipient}'",
-            #         f"'message'",
-            #     ],
-            #     check=True,
-            # )
-            # obviously not ideal for security reasons but it works
-            #     I'm misinterpreting something with subprocess.run.
-            #     Key is that I need to protect shell expansion of the recipient and message variables.
-            subprocess.check_output(cmd, shell=True)
-            move_file_to_sent_directory(file.name)
-        except subprocess.CalledProcessError as e:
-            print("error sending group iMessage:", e)
-    else:
-        print('regular iMessage branch chosen')
-        try:
-            subprocess.run(
-                ["osascript", SEND_IMESSAGE_SCRIPT_PATH, recipient, message],
-                check=True,
-            )
-            move_file_to_sent_directory(file.name)
-        except subprocess.CalledProcessError as e:
-            print("error sending iMessage:", e)
+        pr(f'Recipient={recipient}')
+        if is_sms_recipient(contact_name):
+            print('SMS branch chosen (shouldnt happend)')
+            try:
+                subprocess.run(
+                    ["osascript", SEND_SMS_SCRIPT_PATH, recipient, message],
+                    check=True,
+                )
+                move_file_to_sent_directory(file.name)
+            except subprocess.CalledProcessError as e:
+                print("error sending SMS:", e)
+        elif is_group_chat_recipient(recipient):
+            print('group iMessage branch chosen')
+            message = message.replace('"', '\"')
+            cmd = f'osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} "{recipient}" "{message}" "{images}"'
+            print(cmd, flush=True)
+            try:
+                # subprocess.run(
+                #     [
+                #         "osascript",
+                #         SEND_GROUP_IMESSAGE_SCRIPT_PATH,
+                #         f"'{recipient}'",
+                #         f"'message'",
+                #     ],
+                #     check=True,
+                # )
+                # obviously not ideal for security reasons but it works
+                #     I'm misinterpreting something with subprocess.run.
+                #     Key is that I need to protect shell expansion of the recipient and message variables.
+                subprocess.check_output(cmd, shell=True)
+                move_file_to_sent_directory(file.name)
+            except subprocess.CalledProcessError as e:
+                print("error sending group iMessage:", e)
+        else:
+            print('regular iMessage branch chosen')
+            try:
+                pr(f'{recipient=}, {message=}, {images=}')
+                subprocess.run(
+                    [
+                        "osascript",
+                        SEND_IMESSAGE_SCRIPT_PATH,
+                        recipient,
+                        message,
+                        images,
+                    ],
+                    check=True,
+                )
+                move_file_to_sent_directory(file.name)
+            except subprocess.CalledProcessError as e:
+                print("error sending iMessage:", e)
+    except Exception as e:
+        print(f'Error sending {file}...error below')
+        print(e)
 
 
 def send_messages(directory):
+    pr('SEND_MESSAGES CALL')
     files = []
     for file_path in glob.glob(os.path.join(directory, "*")):
         filename = os.path.basename(file_path)
-        if TEXT_FILENAME_PATTERN.match(filename) and file_ready_to_be_sent(
-            filename
-        ):
-            with open(file_path, "r", encoding="utf-8") as file:
-                send_message(file)
+        try:
+            if TEXT_FILENAME_PATTERN.match(filename) and file_ready_to_be_sent(
+                filename
+            ):
+                with open(file_path, "r", encoding="utf-8") as file:
+                    send_message(file)
+                print(f'Sent {filename} successfully')
+        except Exception as e:
+            print(f'Error sending {filename}...error below')
+            print(f'    {e}')
+            traceback.print_exc(file=sys.stdout)
 
     return files
 

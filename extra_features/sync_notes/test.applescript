@@ -6,7 +6,11 @@ tell application "Notes"
     
     -- Get a reference to the 'Sent' subfolder in iCloud where notes will be moved
     set sentFolder to folder "Sent" of account "iCloud"
-        
+    
+    -- Define the path to the Python script and the python executable
+    set pythonScriptPath to "/Users/tylermasthay/Documents/repos/fork_texts/private_scheduler/extra_features/sync_notes/sync_notes_branch_logic.py"
+    set pythonPath to "/Users/tylermasthay/anaconda3/bin/python3"
+    
     -- Iterate over each note in the searchResults
     repeat with aNote in searchResults
         -- log aNote
@@ -18,7 +22,6 @@ tell application "Notes"
         log "*** SCHEDULED TEXT ***"
         log lastModifiedStr
         log noteText
-        log aNote
         
         -- -- Construct and execute the Python command
         -- set pythonCommand to pythonPath & " " & pythonScriptPath & " " & quoted form of lastModifiedStr & " " & noteTextEscaped

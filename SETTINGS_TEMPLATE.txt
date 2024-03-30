@@ -1,13 +1,11 @@
-# MAX_OVERTIME_MINS prevents accidentally sending really old scheduled texts.
-# should be set approximately to how often you run this script.
-MAX_OVERTIME_MINS=30
-
-# Prints texts to terminal instead of sending them through iMessage
+MAX_OVERTIME_MINS=10000
 DEBUG_TEXTING=False
-
-# Where to look for scheduled texts
 SCHEDULED_TEXTS_DIRECTORY=./texts
-
-myself=155512345678
-sms_myself=155512345678
-# Add more contacts here
+YOUR_NAME=tyler
+WAKE_FREQUENCY=15
+RWAKE_FREQUENCY=1
+OUTPUT_PATH=/tmp/text_scheduler.out
+ABSOLUTE_PYTHON_PATH=/Users/tylermasthay/anaconda3/bin/python #DEPRECATED?!
+SYNC_MODE=always
+WAKE_BUFFER_TIME=30
+MAX_IDLE_EDIT_TIME=30s
