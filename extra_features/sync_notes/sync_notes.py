@@ -218,9 +218,9 @@ def re_ref_icloud(s):
                 s = s.replace(
                     match.group(), f'@@@IMG {directory}{counter}.{file_ext}@@@'
                 )
-            os.system(
-                'osascript extra_features/sync_notes/ctrl_right.applescript'
-            )
+            # os.system(
+            #     'osascript extra_features/sync_notes/ctrl_right.applescript'
+            # )
     return s
 
 

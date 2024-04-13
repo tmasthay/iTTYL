@@ -23,7 +23,8 @@ def main():
     contacts = get_contact_list()
     # replace the numbers with names from contact list, if possible
     for k, v in contacts.items():
-        s = s.replace(v, k)
+        if v not in [None, '']:
+            s = s.replace(v, k)
 
     chats = s.split('\n\n')
     d = {}

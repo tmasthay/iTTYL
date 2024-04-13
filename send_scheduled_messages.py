@@ -26,6 +26,7 @@ SEND_SMS_SCRIPT_PATH = "./send_sms.applescript"
 SEND_GROUP_IMESSAGE_SCRIPT_PATH = (
     "./extra_features/group_chats/send_group_chat.applescript"
 )
+PURE_BOT = env_vars["PURE_BOT"].lower()[0] in ['t', 'y', '1']
 
 f = open('/tmp/send_debug.txt', 'a')
 pr = lambda *args, **kwargs: print(*args, **kwargs, file=f, flush=True)
@@ -94,17 +95,31 @@ def parse_recipient_from_filename(filename):
 
 def get_recipient_number_from_filename(contact_name):
     try:
-        recipient = env_vars[contact_name].lower()
-        if recipient.startswith("chat"):
+        recipient = ""
+        if contact_name in env_vars:
+            recipient = env_vars[contact_name].lower()
+        elif recipient.startswith("chat"):
             recipient = f"imessage;+;{recipient}"
+        elif contact_name not in env_vars and PURE_BOT:
+            recipient = contact_name # do nothing since arbitrary strings allowed
+        else:
+            recipient = contact_name
+        # else:
+        #     raise ValueError(
+        #         f"Error: contact name '{contact_name}' not declared in settings file."
+        #     )
+        if PURE_BOT or is_sms_recipient(recipient):
+            recipient = recipient.replace('_', ' ')
         return recipient
-    except KeyError:
-        raise ValueError(
-            f"Error: contact name '{contact_name}' not declared in settings file."
-        )
-
+    except Exception as e:
+        print(f'Unanticipated error getting recipient number for {contact_name}...error below')
+        print(e)
+        return recipient
 
 def is_sms_recipient(recipient):
+    pure_bot = env_vars["PURE_BOT"].lower()
+    if pure_bot[0] in ['t', 'y', '1']:
+        return True
     return recipient.split("_")[0] == "sms"
 
 
@@ -127,15 +142,22 @@ def send_message(file):
 
         pr(f'Recipient={recipient}')
         if is_sms_recipient(contact_name):
-            print('SMS branch chosen (shouldnt happend)')
+            print('SMS branch chosen')
             try:
+                pr(f'{recipient=}, {message=}, {images=}')
                 subprocess.run(
-                    ["osascript", SEND_SMS_SCRIPT_PATH, recipient, message],
+                    [
+                        "osascript",
+                        SEND_SMS_SCRIPT_PATH,
+                        recipient,
+                        message,
+                        images,
+                    ],
                     check=True,
                 )
                 move_file_to_sent_directory(file.name)
             except subprocess.CalledProcessError as e:
-                print("error sending SMS:", e)
+                print("error sending iMessage:", e)
         elif is_group_chat_recipient(recipient):
             print('group iMessage branch chosen')
             message = message.replace('"', '\"')
