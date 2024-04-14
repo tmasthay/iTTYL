@@ -9,3 +9,5 @@ ABSOLUTE_PYTHON_PATH=/Users/tylermasthay/anaconda3/bin/python
 SYNC_MODE=always
 WAKE_BUFFER_TIME=30
 MAX_IDLE_EDIT_TIME=30s
+RAW_NUMBER_FALLBACK=sms
+PURE_BOT=False

@@ -8,9 +8,13 @@ import re
 from dotenv import dotenv_values
 import traceback
 import sys
+import time
 
 DOTENV_SETTINGS_PATH = "./SETTINGS.txt"
 env_vars = dotenv_values(DOTENV_SETTINGS_PATH)
+
+SMS_CONTACTS_PATH = "./SMS_CONTACTS.txt"
+SMS_CONTACTS = open(SMS_CONTACTS_PATH, "r").read().strip().split("\n")
 
 
 MAX_OVERTIME_MINS = int(env_vars["MAX_OVERTIME_MINS"])
@@ -94,22 +98,36 @@ def parse_recipient_from_filename(filename):
 
 
 def get_recipient_number_from_filename(contact_name):
+    print(f'{contact_name=}', flush=True)
     try:
         recipient = ""
         if contact_name in env_vars:
             recipient = env_vars[contact_name].lower()
-        elif recipient.startswith("chat"):
+        if recipient.startswith("chat"):
             recipient = f"imessage;+;{recipient}"
-        elif contact_name not in env_vars and PURE_BOT:
-            recipient = contact_name # do nothing since arbitrary strings allowed
-        else:
-            recipient = contact_name
+        elif contact_name not in env_vars:
+            # recipient = contact_name # do nothing since arbitrary strings allowed
+            split_rec = [e for e in contact_name.split("&amp") if len(e) > 0]
+            s = ''
+            for rec in split_rec:
+                if rec in env_vars:
+                    s += env_vars[rec].lower() + '&amp'
+                else:
+                    s += rec + '&amp'
+            if s.endswith('&amp'):
+                s = s[:-4]
+            recipient = s
+        # else:
+        #     recipient = contact_name
         # else:
         #     raise ValueError(
         #         f"Error: contact name '{contact_name}' not declared in settings file."
         #     )
         if PURE_BOT or is_sms_recipient(recipient):
-            recipient = recipient.replace('_', ' ')
+            recipient = recipient.replace('_', ' ').strip()
+            if recipient.endswith('&amp'):
+                recipient = recipient[:-4]
+        print(f'in get_recipient...{recipient=}')
         return recipient
     except Exception as e:
         print(f'Unanticipated error getting recipient number for {contact_name}...error below')
@@ -120,10 +138,52 @@ def is_sms_recipient(recipient):
     pure_bot = env_vars["PURE_BOT"].lower()
     if pure_bot[0] in ['t', 'y', '1']:
         return True
-    return recipient.split("_")[0] == "sms"
+    split_rec = [e for e in recipient.split("&amp") if len(e) > 0]
+    is_sms = False
 
+    F = open('./sms.txt', 'w')
+
+    # see if any contacts are SMS contacts
+    for rec in split_rec:
+        if rec in SMS_CONTACTS or rec.startswith("sms"):
+            is_sms = True
+            break
+        
+        # check if recipient is a raw phone number
+        number_found_in_contacts = False
+        if rec.replace("+", "").isdigit():
+            F.write(f'{rec=}\n')
+            # check to see if the number is in the contacts list
+            for k, v in env_vars.items():
+                if v == rec:
+                    number_found_in_contacts = True
+                    # check if the associated key is an SMS contact
+                    if k in SMS_CONTACTS:
+                        F.write('Found in SMS contacts\n')
+                        is_sms = True
+                        break
+            if env_vars['RAW_NUMBER_FALLBACK'].lower() == 'sms' and not number_found_in_contacts:
+                F.write('raw fallback\n')
+                is_sms = True
+                break
+
+    # forcing sms by putting a dummy & at the end of the recipient
+    #     Example: "me& now" will force an SMS to "me", even if "me" is iMessage
+    #     Logic behind this syntax is that "&" is used for concatenation for
+    #         group chat instantiation. So, if "&" is present, it is like we are
+    #         treating the empty string as a "raw phone number". 
+    #         I don't think this is a hack...it's pretty elegant, but consider
+    #         another character maybe for extra clarity?
+    force_sms = '&amp' in recipient and env_vars['RAW_NUMBER_FALLBACK'].lower() == 'sms'
+    return is_sms or force_sms
+
+def last_keypress():
+    cmd="ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print $NF/1000000000; exit}'"
+    s = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+    return float(s)
 
 def is_group_chat_recipient(phone_number):
+    print(f'{phone_number=}')
     return phone_number.startswith("imessage;+;chat")
 
 
@@ -134,6 +194,7 @@ def send_message(file):
         message = file.read()
         print('PRE-EAT')
         message, images = eat_images(message)
+        message = message.replace("&amp", "&").strip()
         print(f'POST-EAT: {message=}, {images=}')
         if DEBUG_TEXTING:
             print(f"DEBUG TEXTING MODE: Would send {recipient}: {message}")
@@ -143,7 +204,21 @@ def send_message(file):
         pr(f'Recipient={recipient}')
         if is_sms_recipient(contact_name):
             print('SMS branch chosen')
+            if images != '':
+                # give user some time to login if they need to
+                buffer_time = int(env_vars["LOGIN_BUFFER_TIME"])
+                time.sleep(buffer_time + 1)
+                most_recent_keypress = last_keypress()
+                print(f'{most_recent_keypress=}, {images=}')
+                if most_recent_keypress > buffer_time:
+                    # user is not active, meaning computer is probably asleep
+                    #     or locked. We won't send the message since in this
+                    #     case, we need GUI interaction spoofing to send the
+                    #     message.
+                    print('User inactive for image-based SMS message...not sending message until user becomes active again')
+                    return
             try:
+                message = message.replace('"', '\"').strip()
                 pr(f'{recipient=}, {message=}, {images=}')
                 subprocess.run(
                     [
@@ -160,7 +235,7 @@ def send_message(file):
                 print("error sending iMessage:", e)
         elif is_group_chat_recipient(recipient):
             print('group iMessage branch chosen')
-            message = message.replace('"', '\"')
+            message = message.replace('"', '\"').replace("&amp", "").strip()
             cmd = f'osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} "{recipient}" "{message}" "{images}"'
             print(cmd, flush=True)
             try:
@@ -183,7 +258,8 @@ def send_message(file):
         else:
             print('regular iMessage branch chosen')
             try:
-                pr(f'{recipient=}, {message=}, {images=}')
+                print(f'{recipient=}, {message=}, {images=}')
+                message = message.replace('"', '\"').replace('&amp', '').strip()
                 subprocess.run(
                     [
                         "osascript",
