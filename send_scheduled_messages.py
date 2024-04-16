@@ -135,9 +135,6 @@ def get_recipient_number_from_filename(contact_name):
         return recipient
 
 def is_sms_recipient(recipient):
-    pure_bot = env_vars["PURE_BOT"].lower()
-    if pure_bot[0] in ['t', 'y', '1']:
-        return True
     split_rec = [e for e in recipient.split("&amp") if len(e) > 0]
     is_sms = False
 
@@ -186,6 +183,13 @@ def is_group_chat_recipient(phone_number):
     print(f'{phone_number=}')
     return phone_number.startswith("imessage;+;chat")
 
+def quote_string(s):
+    if not s.startswith('"') and not s.startswith("'"):
+        s = f"'{s}'"
+    if not s.endswith('"') and not s.endswith("'"):
+        s = f"{s}'"
+    return s
+
 
 def send_message(file):
     try:
@@ -200,44 +204,15 @@ def send_message(file):
             print(f"DEBUG TEXTING MODE: Would send {recipient}: {message}")
             move_file_to_sent_directory(file.name)
             return
+        
+        service_type = 'SMS' if is_sms_recipient(contact_name) else 'iMessage'
 
-        pr(f'Recipient={recipient}')
-        if is_sms_recipient(contact_name):
-            message = message.replace('"', '\"').strip()
-            print(f'SMS Branch chosen...IN main: {recipient=}, {message=}, {images=}')
-            if images != '':
-                # give user some time to login if they need to
-                buffer_time = int(env_vars["LOGIN_BUFFER_TIME"])
-                time.sleep(buffer_time + 1)
-                most_recent_keypress = last_keypress()
-                print(f'{most_recent_keypress=}, {images=}')
-                if most_recent_keypress > buffer_time:
-                    # user is not active, meaning computer is probably asleep
-                    #     or locked. We won't send the message since in this
-                    #     case, we need GUI interaction spoofing to send the
-                    #     message.
-                    print('User inactive for image-based SMS message...not sending message until user becomes active again')
-                    return
-
-
-            try:
-                subprocess.run(
-                    [
-                        "osascript",
-                        SEND_SMS_SCRIPT_PATH,
-                        recipient,
-                        message,
-                        images,
-                    ],
-                    check=True,
-                )
-                move_file_to_sent_directory(file.name)
-            except subprocess.CalledProcessError as e:
-                print("error sending iMessage:", e)
-        elif is_group_chat_recipient(recipient):
+        message = message.replace('"', '\"').replace("&amp", "").strip()
+        print(f'{recipient=}\n    {service_type=}\n    {message=}\n    {images=}')
+        
+        if is_group_chat_recipient(recipient):
             print('group iMessage branch chosen')
-            message = message.replace('"', '\"').replace("&amp", "").strip()
-            cmd = f'osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} "{recipient}" "{message}" "{images}"'
+            cmd = f'osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} "{recipient}" "{service_type}" "{message}" "{images}"'
             print(cmd, flush=True)
             try:
                 # subprocess.run(
@@ -259,13 +234,12 @@ def send_message(file):
         else:
             print('regular iMessage branch chosen')
             try:
-                print(f'{recipient=}, {message=}, {images=}')
-                message = message.replace('"', '\"').replace('&amp', '').strip()
                 subprocess.run(
                     [
                         "osascript",
                         SEND_IMESSAGE_SCRIPT_PATH,
                         recipient,
+                        service_type,
                         message,
                         images,
                     ],

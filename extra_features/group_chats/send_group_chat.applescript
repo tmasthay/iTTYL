@@ -1,13 +1,21 @@
-on run argv
-    -- Extract the chat ID and message from the arguments
-    set chatID to item 1 of argv
-    set message to item 2 of argv
-    set imagePaths to item 3 of argv
+on run {chatID, serviceType, message, imagePaths}
+    set split_chat to split(chatID, ";")
+    set serviceType to (item 1 of split_chat)
     
     set foundChat to missing value
 
     -- Your sendMessageToChat function adapted for command line
-    tell application "Messages"        
+    tell application "Messages" 
+        if serviceType is "iMessage" then
+            set targetService to first service whose service type = iMessage
+        else if serviceType is "SMS" then
+            set targetService to first service whose service type = SMS
+        else
+            display dialog "Invalid service type: " & serviceType
+            return
+        end if
+        log targetService
+
         -- Iterate through each chat to find the one with the matching ID
         repeat with aChat in every chat
             if id of aChat is chatID then

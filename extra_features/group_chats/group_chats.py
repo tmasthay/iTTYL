@@ -15,9 +15,9 @@ def main():
         'utf-8'
     )
     s = s.strip()
-    s = s.replace('iMessage;+;', '')
+    # s = s.replace('iMessage;+;', '')
     lines = s.split('\n')
-    clean_lines = [e.split(':')[-1].replace('+', '') for e in lines]
+    clean_lines = [e.split(':')[-1].replace('+', '').replace(';;', ';+;') for e in lines]
     s = '\n'.join(clean_lines)
 
     contacts = get_contact_list()
