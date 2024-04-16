@@ -152,7 +152,7 @@ def is_sms_recipient(recipient):
         # check if recipient is a raw phone number
         number_found_in_contacts = False
         if rec.replace("+", "").isdigit():
-            F.write(f'{rec=}\n')
+            # F.write(f'{rec=}\n')
             # check to see if the number is in the contacts list
             for k, v in env_vars.items():
                 if v == rec:
@@ -163,7 +163,7 @@ def is_sms_recipient(recipient):
                         is_sms = True
                         break
             if env_vars['RAW_NUMBER_FALLBACK'].lower() == 'sms' and not number_found_in_contacts:
-                F.write('raw fallback\n')
+                # F.write('raw fallback\n')
                 is_sms = True
                 break
 
@@ -203,7 +203,8 @@ def send_message(file):
 
         pr(f'Recipient={recipient}')
         if is_sms_recipient(contact_name):
-            print('SMS branch chosen')
+            message = message.replace('"', '\"').strip()
+            print(f'SMS Branch chosen...IN main: {recipient=}, {message=}, {images=}')
             if images != '':
                 # give user some time to login if they need to
                 buffer_time = int(env_vars["LOGIN_BUFFER_TIME"])
@@ -217,9 +218,9 @@ def send_message(file):
                     #     message.
                     print('User inactive for image-based SMS message...not sending message until user becomes active again')
                     return
+
+
             try:
-                message = message.replace('"', '\"').strip()
-                pr(f'{recipient=}, {message=}, {images=}')
                 subprocess.run(
                     [
                         "osascript",
