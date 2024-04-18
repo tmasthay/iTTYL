@@ -8,7 +8,8 @@ import re
 from dotenv import dotenv_values
 import traceback
 import sys
-import time
+import time 
+from shlex import quote
 
 DOTENV_SETTINGS_PATH = "./SETTINGS.txt"
 env_vars = dotenv_values(DOTENV_SETTINGS_PATH)
@@ -192,28 +193,33 @@ def quote_string(s):
 
 
 def send_message(file):
+    # print(file)
     try:
         contact_name = parse_recipient_from_filename(file.name)
         recipient = get_recipient_number_from_filename(contact_name)
         message = file.read()
         print('PRE-EAT')
         message, images = eat_images(message)
-        message = message.replace("&amp", "&").strip()
+        message = message.replace('"', '\"').replace("&amp", "&").strip()
+        service_type = 'SMS' if is_sms_recipient(contact_name) else 'iMessage'
+
+        # images = quote(images)
+        # recipient = quote(recipient)
+        # service_type = quote(service_type)
+
         print(f'POST-EAT: {message=}, {images=}')
         if DEBUG_TEXTING:
             print(f"DEBUG TEXTING MODE: Would send {recipient}: {message}")
             move_file_to_sent_directory(file.name)
             return
         
-        service_type = 'SMS' if is_sms_recipient(contact_name) else 'iMessage'
-
-        message = message.replace('"', '\"').replace("&amp", "").strip()
+        # message = quote(message).strip()
         print(f'{recipient=}\n    {service_type=}\n    {message=}\n    {images=}')
         
         if is_group_chat_recipient(recipient):
             print('group iMessage branch chosen')
-            cmd = f'osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} "{recipient}" "{service_type}" "{message}" "{images}"'
-            print(cmd, flush=True)
+            # cmd = f'osascript {SEND_GROUP_IMESSAGE_SCRIPT_PATH} "{recipient}" "{service_type}" "{message}" "{images}"'
+            # print(cmd, flush=True)
             try:
                 # subprocess.run(
                 #     [
@@ -224,10 +230,17 @@ def send_message(file):
                 #     ],
                 #     check=True,
                 # )
-                # obviously not ideal for security reasons but it works
-                #     I'm misinterpreting something with subprocess.run.
-                #     Key is that I need to protect shell expansion of the recipient and message variables.
-                subprocess.check_output(cmd, shell=True)
+                # subprocess.check_output(cmd, shell=True)
+                subprocess.run(
+                    [
+                        "osascript",
+                        SEND_GROUP_IMESSAGE_SCRIPT_PATH,
+                        recipient,
+                        service_type,
+                        message,
+                        images,
+                    ]
+                )
                 move_file_to_sent_directory(file.name)
             except subprocess.CalledProcessError as e:
                 print("error sending group iMessage:", e)
