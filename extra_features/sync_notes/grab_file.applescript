@@ -1,6 +1,5 @@
 on run {filePath}
     -- Set the path to the image file
-    -- set filePath to "/Users/tylermasthay/Pictures/text_scheduler/1.heic"
     
     -- Open Finder
     tell application "Finder"
