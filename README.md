@@ -129,6 +129,7 @@ There are three ways to send images ranked from "most general, most annoying" to
    ```
    2. Copy _only_ the "iMessage;+;chatXXXX" or "SMS;+;chatXXX" parts (indented, individual contacts are just there to help _you_ distinguish which group chat is which).
    3. Go into SETTINGS.txt and give it an alias such as `my_group_chat=iMessage;+;chatXXXX` or `my_group_chat=SMS;+;chatXXX`.
+10. cp `SMS_CONTACTS_TEMPLATE.txt SMS_CONTACTS.txt`. Put the identifiers for non-iPhone users from your `SETTINGS.txt`. There are a few examples in the template for cases to consider so that things do not break.
 
 # SETTINGS.txt
 
