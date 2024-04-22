@@ -85,6 +85,7 @@ def strip_day_of_week(last_modified):
 
 
 def get_time(last_modified, text_body):
+    header = text_body.split('\n')[1].lower().strip()
     last_modified = strip_day_of_week(last_modified)
     # pr(f'{last_modified=}')
     try:
@@ -95,7 +96,7 @@ def get_time(last_modified, text_body):
     except Exception as e:
         print('Error occurred while parsing last_modified time')
         raise e
-    header = text_body.split('\n')[0].lower().strip()
+
     if header.startswith('text '):
         header = header[5:]
     tokens = header.split(' ')
