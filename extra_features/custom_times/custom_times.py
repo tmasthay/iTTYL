@@ -11,30 +11,32 @@ class CustomTimesNamespace:
 
 def tonight(time_string, last_modified_time):
     c = CustomTimesNamespace.cfg['tonight']
+    ref_time = c['time']
 
     tokens = time_string.strip().lower().split(' ')
     if len(tokens) > 1:
-        c['time'] = ' '.join(tokens[1:])
+        ref_time = ' '.join(tokens[1:])
 
     # Calculate what time today at midnight is
     today = datetime.date.today()
-    now = datetime.datetime.now()
+    # now = datetime.datetime.now()
 
     # Read in format in HH:MM AM/PM format relative to today
     # time = datetime.datetime.strptime(c['time'], '%I:%M %p'
-    time = datetime.datetime.strptime(c['time'], '%I:%M %p')
+    time = datetime.datetime.strptime(ref_time, '%I:%M %p')
     send_time = datetime.datetime.combine(today, time.time())
 
     return send_time
 
 def night(time_string, last_modified_time):
     c = CustomTimesNamespace.cfg['tonight']
+    ref_time = c['time']
 
     tokens = time_string.strip().lower().split(' ')
 
     # Calculate what time today at midnight is
     today = datetime.date.today()
-    now = datetime.datetime.now()
+    # now = datetime.datetime.now()
 
     # Read in format in HH:MM AM/PM format relative to today
     # time = datetime.datetime.strptime(c['time'], '%I:%M %p'
@@ -43,12 +45,12 @@ def night(time_string, last_modified_time):
     else:
         additional_days = int(tokens[1])
         if len(tokens) > 2:
-            c['time'] = ' '.join(tokens[2:])
-    time = datetime.datetime.strptime(c['time'], '%I:%M %p')
+            ref_time = ' '.join(tokens[2:])
+    time = datetime.datetime.strptime(ref_time, '%I:%M %p')
     
     # add additional days as specified
     time = time + datetime.timedelta(days=additional_days)
-    
+
     send_time = datetime.datetime.combine(today, time.time())
 
     return send_time
@@ -93,9 +95,9 @@ def protocol_translator(s):
         return plus
 
     for k in c.keys():
+        aliases = c[k].get('aliases', [])
         if s.startswith(k) or (
-            'aliases' in c[k]
-            and any([s.startswith(e) for e in c[k]['aliases']])
+            any([s.startswith(a) for a in aliases])
         ):
             # dynamically import the function from this file
             return globals()[k]
