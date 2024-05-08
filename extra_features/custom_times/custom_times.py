@@ -27,6 +27,32 @@ def tonight(time_string, last_modified_time):
 
     return send_time
 
+def night(time_string, last_modified_time):
+    c = CustomTimesNamespace.cfg['tonight']
+
+    tokens = time_string.strip().lower().split(' ')
+
+    # Calculate what time today at midnight is
+    today = datetime.date.today()
+    now = datetime.datetime.now()
+
+    # Read in format in HH:MM AM/PM format relative to today
+    # time = datetime.datetime.strptime(c['time'], '%I:%M %p'
+    if len(tokens) == 1:
+        additional_days = 0
+    else:
+        additional_days = int(tokens[1])
+        if len(tokens) > 2:
+            c['time'] = ' '.join(tokens[2:])
+    time = datetime.datetime.strptime(c['time'], '%I:%M %p')
+    
+    # add additional days as specified
+    time = time + datetime.timedelta(days=additional_days)
+    
+    send_time = datetime.datetime.combine(today, time.time())
+
+    return send_time
+
 
 def now(time_string, last_modified_time):
     return datetime.datetime.now()
@@ -67,13 +93,15 @@ def protocol_translator(s):
         return plus
 
     for k in c.keys():
-        if s == k or ('aliases' in c[k] and s in c[k]['aliases']):
+        if s.startswith(k) or (
+            'aliases' in c[k]
+            and any([s.startswith(e) for e in c[k]['aliases']])
+        ):
             # dynamically import the function from this file
             return globals()[k]
     else:
         # read absolute time
         def helper(time_string, last_modified_time):
-            input(s)
             return datetime.datetime.strptime(s, '%B %d, %Y %I:%M:%S %p')
 
         return helper

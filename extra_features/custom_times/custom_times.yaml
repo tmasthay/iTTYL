@@ -1,0 +1,16 @@
+tonight:
+  time: 8:00 PM
+  aliases:
+  - evening
+  - tn
+
+night:
+  time: 8:00 PM
+  aliases:
+  - nite
+
+now: {}
+
+plus:
+  aliases:
+  - +
