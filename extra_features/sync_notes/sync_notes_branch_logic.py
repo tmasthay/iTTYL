@@ -4,6 +4,10 @@ import sys
 from dotenv import dotenv_values
 import re
 
+# temporary hack -- refactor this later on
+sys.path.append(os.path.abspath(os.path.join(__file__, '../../..')))
+import extra_features.custom_times as ct
+
 DOTENV_SETTINGS_PATH = "./SETTINGS.txt"
 env_vars = dotenv_values(DOTENV_SETTINGS_PATH)
 
@@ -105,7 +109,7 @@ def get_time_legacy(last_modified, text_body):
     else:
         raise ValueError(f'Error parsing time from text_body\n{text_body}')
     
-def get_time(last_modified, text_body, time_translator):
+def get_time(last_modified, text_body):
     last_modified = strip_day_of_week(last_modified)
     try:
         last_modified_time = datetime.strptime(
@@ -120,6 +124,7 @@ def get_time(last_modified, text_body, time_translator):
     if( len(lines) < 3 ):
         raise ValueError('No "true" body to the text')
     time_string = lines[1].strip()
+    time_translator = ct.protocol_translator(time_string)
     return time_translator(time_string, last_modified_time)
 
 
@@ -158,18 +163,14 @@ def main():
         pr('YOYOY')
         return 1
     if sync_mode == 'never':
-        pr("NONON")
         return 1
     if len(sys.argv) != 3:
-        pr("NOJNONO")
         raise ValueError(
             'Usage: python sync_notes_branch_logic.py last_modified text_body'
         )
-    pr("HOHOH")
     only_if_ready = sync_mode in ['conditional', 'only_if_ready']
     pr(f'{only_if_ready=}')
     last_modified, text_body = sys.argv[1:]
-    pr('YOUIOSDHFOI')
     pr(f'{last_modified=}')
     pr(f'{datetime.now()=}')
     text_body = strip_html_tags(text_body)

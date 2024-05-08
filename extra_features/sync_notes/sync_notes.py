@@ -7,6 +7,11 @@ import re
 import base64
 from dotenv import dotenv_values
 from fetch_icloud import download_share_link
+import sys
+
+# temporary hack -- refactor this later on
+sys.path.append(os.path.abspath(os.path.join(__file__, '../../..')))
+import extra_features.custom_times as ct
 
 DEMARK = "*** SCHEDULED TEXT ***\n"
 SCHEDULED_TEXTS_DIRECTORY = [
@@ -84,7 +89,7 @@ def strip_day_of_week(last_modified):
     return last_modified
 
 
-def get_time(last_modified, text_body):
+def get_time_legacy(last_modified, text_body):
     header = text_body.split('\n')[1].lower().strip()
     last_modified = strip_day_of_week(last_modified)
     # pr(f'{last_modified=}')
@@ -121,6 +126,23 @@ def get_time(last_modified, text_body):
     else:
         raise ValueError(f'Error parsing time from text_body\n{text_body}')
 
+def get_time(last_modified, text_body):
+    last_modified = strip_day_of_week(last_modified)
+    try:
+        last_modified_time = datetime.strptime(
+            last_modified, '%B %d, %Y %I:%M:%S %p'
+        )
+        # pr(f'{last_modified_time=}')
+    except Exception as e:
+        print('Error occurred while parsing last_modified time')
+        raise e
+    # header = text_body.split('\n')[0].lower().strip()
+    lines = text_body.split('\n')
+    if( len(lines) < 3 ):
+        raise ValueError('No "true" body to the text')
+    time_string = lines[1].strip()
+    time_translator = ct.protocol_translator(time_string)
+    return time_translator(time_string, last_modified_time)
 
 def text_ready(last_modified, text_body, only_if_ready):
     pr('TEXT_READY CALL')
