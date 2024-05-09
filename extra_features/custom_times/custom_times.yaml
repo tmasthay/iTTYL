@@ -1,11 +1,11 @@
 tonight:
-  time: 8:00 PM
+  time: 7:55 PM
   aliases:
   - evening
   - tn
 
 night:
-  time: 8:01 PM
+  time: 7:55 PM
   aliases:
   - nite
 
