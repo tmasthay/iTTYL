@@ -277,6 +277,19 @@ def send_messages(directory):
             ):
                 with open(file_path, "r", encoding="utf-8") as file:
                     send_message(file)
+                    with open('/tmp/send.log', 'a') as send_log:
+                        curr_time = time.time()
+                        curr_time_str = datetime.fromtimestamp(curr_time).strftime('%Y-%m-%d %H:%M:%S')
+                        s = f'{curr_time_str}\n    {filename}\n'
+                        print(s)
+                        send_log.write(s)
+                    
+                    # limit to 200 most recent lines (100 most recent messages)
+                    with open('/tmp/send.log', 'r') as send_log:
+                        lines = send_log.readlines()
+                        if len(lines) > 200:
+                            with open('/tmp/send.log', 'w') as send_log:
+                                send_log.writelines(lines[-200:])
                 print(f'Sent {filename} successfully')
         except Exception as e:
             print(f'Error sending {filename}...error below')

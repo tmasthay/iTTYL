@@ -29,7 +29,7 @@ def tonight(time_string, last_modified_time):
     return send_time
 
 def night(time_string, last_modified_time):
-    c = CustomTimesNamespace.cfg['tonight']
+    c = CustomTimesNamespace.cfg['night']
     ref_time = c['time']
 
     tokens = time_string.strip().lower().split(' ')
@@ -46,12 +46,18 @@ def night(time_string, last_modified_time):
         additional_days = int(tokens[1])
         if len(tokens) > 2:
             ref_time = ' '.join(tokens[2:])
-    time = datetime.datetime.strptime(ref_time, '%I:%M %p')
+        else:
+            ref_time = c['time']
+    print(f'{additional_days=}')
+    the_time = datetime.datetime.strptime(ref_time, '%I:%M %p')
+    print(f'{the_time=}')
     
     # add additional days as specified
-    time = time + datetime.timedelta(days=additional_days)
+    the_time = the_time + datetime.timedelta(days=additional_days)
 
-    send_time = datetime.datetime.combine(today, time.time())
+    send_time = datetime.datetime.combine(today, the_time.time()) + datetime.timedelta(days=additional_days)
+
+    print(f'{the_time=} {send_time=}')
 
     return send_time
 

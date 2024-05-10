@@ -249,6 +249,18 @@ def re_ref_icloud(s):
 
 
 def main():
+    with open('/tmp/calls_sync.txt', 'a') as mini_log:
+        current_time = datetime.now()
+        # mini_log.write(f'{current_time}\n')
+        mini_log.write(f'{current_time.strftime("%Y-%m-%d %H:%M:%S")}\n')
+    
+    # limit log to last 100 calls
+    with open('/tmp/calls_sync.txt', 'r') as mini_log:
+        lines = mini_log.readlines()
+        if len(lines) > 100:
+            with open('/tmp/calls_sync.txt', 'w') as mini_log:
+                mini_log.writelines(lines[-100:])
+        
     sync_mode = env_vars['SYNC_MODE'].lower()
     if sync_mode == 'never':
         print('Sync mode is set to "never". Exiting...')
