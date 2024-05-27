@@ -191,6 +191,23 @@ def quote_string(s):
         s = f"{s}'"
     return s
 
+def clean_message(msg):
+    msg = (
+        msg
+        .replace("&quot", '"')
+        .replace("&amp", "&")
+        .replace("&lt", "<")
+        .replace("&gt", ">")
+        .replace("&apos", "'")
+        .replace("&nbsp", " ")
+        .replace("&excl", "!")
+        .replace("&num", "#")
+        .replace("&dollar", "$")
+        .replace("&percnt", "%")
+        .replace('"', '\"')
+        .strip()
+    )
+    return msg.replace('"', '\"').replace("&amp", "&").strip()
 
 def send_message(file):
     # print(file)
