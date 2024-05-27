@@ -217,7 +217,7 @@ def send_message(file):
         message = file.read()
         print('PRE-EAT')
         message, images = eat_images(message)
-        message = message.replace('"', '\"').replace("&amp", "&").strip()
+        message = clean_message(message)
         service_type = 'SMS' if is_sms_recipient(contact_name) else 'iMessage'
 
         # images = quote(images)
