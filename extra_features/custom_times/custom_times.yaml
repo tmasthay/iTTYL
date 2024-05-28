@@ -1,5 +1,16 @@
-daily_mailly:
+tonight:
+  time: 7:55 PM
   aliases:
-  - dm
-  - daily
-  - husk
+  - evening
+  - tn
+
+night:
+  time: 7:55 PM
+  aliases:
+  - nite
+
+now: {}
+
+plus:
+  aliases:
+  - +

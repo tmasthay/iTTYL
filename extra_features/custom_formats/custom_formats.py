@@ -10,8 +10,13 @@ class CustomTimesNamespace:
 
 def daily_mailly(text):
     text = text.strip()
-    if not text.startswith('DAILY MAILLY'):
-        text = f'DAILY MAILLY\n{text}'
+    lines = text.split('\n')
+    if len(lines) == 0:
+        return text
+    elif not lines[0].startswith('DAILY MAILLY'):
+        lines[0] = 'DAILY MAILLY'
+    text = '\n'.join(lines).strip()
+    return text
 
 def protocol_translator(s):
     c = CustomTimesNamespace.cfg
@@ -19,7 +24,7 @@ def protocol_translator(s):
     if len(u) == 0:
         return s
     else:
-        u = u[0]
+        u = u[0].lower().strip()
 
     for k in c.keys():
         aliases = c[k].get('aliases', [])

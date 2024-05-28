@@ -323,6 +323,7 @@ def main():
             body = body.strip()
             body = cf.protocol_translator(body)
             pr(body)
+            print(body)
             f.write(body)
             os.system(move_note_cmd)
             print(f'File "{path}" created')
