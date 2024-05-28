@@ -12,6 +12,7 @@ import sys
 # temporary hack -- refactor this later on
 sys.path.append(os.path.abspath(os.path.join(__file__, '../../..')))
 import extra_features.custom_times as ct
+import extra_features.custom_formats as cf
 
 DEMARK = "*** SCHEDULED TEXT ***\n"
 SCHEDULED_TEXTS_DIRECTORY = [
@@ -319,8 +320,10 @@ def main():
         with open(path, 'w') as f:
             body = re_ref_imgs(body)
             body = re_ref_icloud(body)
+            body = body.strip()
+            body = cf.protocol_translator(body)
             pr(body)
-            f.write(body.strip())
+            f.write(body)
             os.system(move_note_cmd)
             print(f'File "{path}" created')
 
