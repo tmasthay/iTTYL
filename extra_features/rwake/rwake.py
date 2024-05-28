@@ -16,7 +16,11 @@ def main():
     # hours_per_day = 24
     # num_schedules = int(hours_per_day / rwake)
     num_schedules = 900
+
+    # find near "top of the hour with respect to now"
     now = datetime.now()
+    now = now.replace(minute=0, second=0, microsecond=0)
+    
     for i in range(1, num_schedules + 1):
         future_time = now + timedelta(hours=i * rwake)
         string_time = future_time.strftime("%m/%d/%Y %H:%M:%S")

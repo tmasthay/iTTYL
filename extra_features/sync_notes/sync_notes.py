@@ -7,6 +7,11 @@ import re
 import base64
 from dotenv import dotenv_values
 from fetch_icloud import download_share_link
+import sys
+
+# temporary hack -- refactor this later on
+sys.path.append(os.path.abspath(os.path.join(__file__, '../../..')))
+import extra_features.custom_times as ct
 
 DEMARK = "*** SCHEDULED TEXT ***\n"
 SCHEDULED_TEXTS_DIRECTORY = [
@@ -84,7 +89,8 @@ def strip_day_of_week(last_modified):
     return last_modified
 
 
-def get_time(last_modified, text_body):
+def get_time_legacy(last_modified, text_body):
+    header = text_body.split('\n')[1].lower().strip()
     last_modified = strip_day_of_week(last_modified)
     # pr(f'{last_modified=}')
     try:
@@ -95,7 +101,7 @@ def get_time(last_modified, text_body):
     except Exception as e:
         print('Error occurred while parsing last_modified time')
         raise e
-    header = text_body.split('\n')[0].lower().strip()
+
     if header.startswith('text '):
         header = header[5:]
     tokens = header.split(' ')
@@ -120,6 +126,24 @@ def get_time(last_modified, text_body):
     else:
         raise ValueError(f'Error parsing time from text_body\n{text_body}')
 
+def get_time(last_modified, text_body):
+    last_modified = strip_day_of_week(last_modified)
+    try:
+        last_modified_time = datetime.strptime(
+            last_modified, '%B %d, %Y %I:%M:%S %p'
+        )
+        # pr(f'{last_modified_time=}')
+    except Exception as e:
+        print('Error occurred while parsing last_modified time')
+        raise e
+    # header = text_body.split('\n')[0].lower().strip()
+    # Omit the first line (modified time=redundant)
+    lines = text_body.split('\n')[1:]
+    if( len(lines) < 3 ):
+        raise ValueError('No "true" body to the text')
+    time_string = lines[1].strip()
+    time_translator = ct.protocol_translator(time_string)
+    return time_translator(time_string, last_modified_time)
 
 def text_ready(last_modified, text_body, only_if_ready):
     pr('TEXT_READY CALL')
@@ -225,6 +249,18 @@ def re_ref_icloud(s):
 
 
 def main():
+    with open('/tmp/calls_sync.txt', 'a') as mini_log:
+        current_time = datetime.now()
+        # mini_log.write(f'{current_time}\n')
+        mini_log.write(f'{current_time.strftime("%Y-%m-%d %H:%M:%S")}\n')
+    
+    # limit log to last 100 calls
+    with open('/tmp/calls_sync.txt', 'r') as mini_log:
+        lines = mini_log.readlines()
+        if len(lines) > 100:
+            with open('/tmp/calls_sync.txt', 'w') as mini_log:
+                mini_log.writelines(lines[-100:])
+        
     sync_mode = env_vars['SYNC_MODE'].lower()
     if sync_mode == 'never':
         print('Sync mode is set to "never". Exiting...')
@@ -253,32 +289,17 @@ def main():
         last_modified = lines[0].split(' ')[1:]
         last_modified = ' '.join(last_modified).replace('at ', '')
         ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
-        header = lines[1].strip()
-        if not header.startswith('Text '):
-            header = header[0].lower() + header[1:]
-            header = 'Text ' + header
+        header = "Text " + lines[1].strip().lower()
         note_id = lines[-1].strip().replace("note id ", "")
-        body = '\n'.join(lines[2:-1]).strip()
+        body = '\n'.join(lines[3:-1]).strip()
+        scheduled_time = get_time(last_modified, text).strftime('%B %d, %Y %I:%M:%S %p')
+        header = f'{header} {scheduled_time}'
+        filename = f'{header}.txt'
 
         if not text_ready(last_modified, text, only_if_ready=only_if_ready):
             # print(f'Text {i+1} not ready. Skipping...')
             continue
 
-        time_mode = header.split(' ')[-1]
-
-        header_meat = " ".join(header.split(" ")[:-1]).strip()
-
-        if time_mode.lower() == 'now':
-            scheduled_time = ref_time.strftime('%B %d, %Y %I:%M:%S %p')
-            header = f'{header_meat} {scheduled_time}'
-        if time_mode[0] == '+':
-            delta = str_to_timedelta(time_mode[1:])
-            scheduled_time = (ref_time + delta).strftime(
-                '%B %d, %Y %I:%M:%S %p'
-            )
-            header = f'{header_meat} {scheduled_time}'
-
-        filename = f'{header}.txt'
         pr(filename)
         path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, filename)
         sent_path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, 'sent', filename)
