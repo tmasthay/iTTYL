@@ -290,6 +290,8 @@ def main():
         last_modified = lines[0].split(' ')[1:]
         last_modified = ' '.join(last_modified).replace('at ', '')
         ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
+
+        contact_name = lines[1].strip().lower()
         header = "Text " + lines[1].strip().lower()
         note_id = lines[-1].strip().replace("note id ", "")
         body = '\n'.join(lines[3:-1]).strip()
@@ -321,7 +323,7 @@ def main():
             body = re_ref_imgs(body)
             body = re_ref_icloud(body)
             body = body.strip()
-            body = cf.protocol_translator(body)
+            body = cf.protocol_translator(body, contact_name=contact_name)
             pr(body)
             print(body)
             f.write(body)

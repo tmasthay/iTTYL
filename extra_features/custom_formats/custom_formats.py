@@ -8,7 +8,7 @@ class CustomTimesNamespace:
     path = os.path.dirname(__file__) + '/custom_formats.yaml'
     cfg = yaml.load(open(path), Loader=yaml.FullLoader)
 
-def daily_mailly(text):
+def daily_mailly(text, *, contact_name=None):
     text = text.strip()
     lines = text.split('\n')
     if len(lines) == 0:
@@ -48,7 +48,7 @@ def daily_mailly(text):
 
 
 
-def protocol_translator(s):
+def protocol_translator(s, *, contact_name=None):
     c = CustomTimesNamespace.cfg
     u = s.strip().split('\n')
     if len(u) == 0:
@@ -62,7 +62,7 @@ def protocol_translator(s):
             any([u.startswith(a) for a in aliases])
         ):
             # dynamically import the function from this file
-            return globals()[k](s)
+            return globals()[k](s, contact_name=contact_name)
     else:
         return s
     
