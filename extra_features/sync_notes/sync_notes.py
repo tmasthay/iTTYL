@@ -127,7 +127,7 @@ def get_time_legacy(last_modified, text_body):
     else:
         raise ValueError(f'Error parsing time from text_body\n{text_body}')
 
-def get_time(last_modified, text_body):
+def get_info(last_modified, text_body):
     last_modified = strip_day_of_week(last_modified)
     try:
         last_modified_time = datetime.strptime(
@@ -142,9 +142,8 @@ def get_time(last_modified, text_body):
     lines = text_body.split('\n')[1:]
     if( len(lines) < 3 ):
         raise ValueError('No "true" body to the text')
-    time_string = lines[1].strip()
-    time_translator = ct.protocol_translator(time_string)
-    return time_translator(time_string, last_modified_time)
+    transformed_text, send_time = ct.protocol_dispatch(text_body)
+    return transformed_text, send_time
 
 def text_ready(last_modified, text_body, only_if_ready):
     pr('TEXT_READY CALL')
