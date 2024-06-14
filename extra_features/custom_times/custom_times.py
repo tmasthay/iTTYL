@@ -63,8 +63,10 @@ class Helpers:
             [border, empty_line] + heading_lines + [empty_line, border]
         )
 
-        valid_star_emojis = ["😍", "🐕", "🥺"]
-        valid_space_emojis = ["🐭", "🤩", "🐶"]
+        # valid_star_emojis = ["😍", "🐕", "🥺"] 
+        # valid_space_emojis = ["🐭", "🤩", "🐶"]
+        valid_star_emojis = ['*']
+        valid_space_emojis = ['.']
 
         # randomly select a star replacement emoji
         rand_idx = random.randint(0, len(valid_star_emojis) - 1)
@@ -192,6 +194,8 @@ class Helpers:
         for token in tokens:
             assert len(token) <= line_width
             extra_emojis = int(0.5 * len(token))
+            if fill_char == '.':
+                extra_emojis = 0
             meat_line += Helpers.make_line(edge_char, fill_char, token, line_width + extra_emojis) + "\n"
 
         s = (
@@ -206,8 +210,10 @@ class Helpers:
 
     @staticmethod
     def fun_star_box(header, width_pad, iphone_width):
-        edge_char_choices = ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊"]
-        fill_char_choices = ["🤩", "🥺", "🤯", "🤪", "🤓", "🤠", "🤡"]
+        # edge_char_choices = ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊"]
+        # fill_char_choices = ["🤩", "🥺", "🤯", "🤪", "🤓", "🤠", "🤡"]
+        edge_char_choices = ['*']
+        fill_char_choices = ['.']
 
         edge_char = Helpers.get_rand_elem(edge_char_choices)
         fill_char = Helpers.get_rand_elem(fill_char_choices)
@@ -217,16 +223,17 @@ class Helpers:
 
 class FormatProtocols:
     @staticmethod
-    def header_list(text, *, contact_name=None, header, width_pad, height_pad):
+    def header_list(text, *, contact_name=None, header, width_pad, height_pad, raw_header):
         text = text.strip()
         lines = text.split('\n')
         if len(lines) == 0:
             return text
 
         # make a box of stars around the header
-        iphone_width = 10
+        iphone_width = 26
         # header = Helpers.weird_star_box(header, width_pad, iphone_width) + '\n\n'
-        header = Helpers.fun_star_box(header, width_pad, iphone_width) + '\n\n'
+        if not raw_header:
+            header = Helpers.fun_star_box(header, width_pad, iphone_width) + '\n\n'
 
         # Ensure the first line is "DAILY MAILLY"
         # if not lines[0].startswith('DAILY MAILLY'):
@@ -432,6 +439,7 @@ class TransformProtocols:
         header = gm['people'][contact_name]['header']
         width_pad = gm['people'][contact_name]['width_pad']
         height_pad = gm['people'][contact_name]['height_pad']
+        raw_header = gm['people'][contact_name]['raw_header']
 
         send_time = TimeProtocols.leapfrog(
             last_modified_time=last_modified_time,
@@ -445,6 +453,7 @@ class TransformProtocols:
             header=header,
             width_pad=width_pad,
             height_pad=height_pad,
+            raw_header=raw_header
         )
         return send_time, reformatted_text
 
