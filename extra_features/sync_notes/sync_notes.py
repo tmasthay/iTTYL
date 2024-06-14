@@ -142,7 +142,10 @@ def get_info(last_modified, text_body):
     lines = text_body.split('\n')[1:]
     if( len(lines) < 3 ):
         raise ValueError('No "true" body to the text')
-    transformed_text, send_time = ct.protocol_dispatch(text_body)
+    true_text_body = '\n'.join([e for e in lines if not e.startswith('note id x-coredata://')])
+    if '/' not in true_text_body:
+        print(true_text_body)
+    transformed_text, send_time = ct.TransformDispatcher.dispatch(last_modified_time, true_text_body)
     return transformed_text, send_time
 
 def text_ready(last_modified, text_body, only_if_ready):
@@ -160,9 +163,10 @@ def text_ready(last_modified, text_body, only_if_ready):
     pr(f'{is_ready=}')
     pr(f'{env_vars["MAX_IDLE_EDIT_TIME"]=}')
     pr(f'{str_to_timedelta(env_vars["MAX_IDLE_EDIT_TIME"])=}')
+    send_time, _ = get_info(last_modified, text_body)
     if only_if_ready:
         is_ready = (
-            is_ready and get_time(last_modified, text_body) <= datetime.now()
+            is_ready and send_time <= datetime.now()
         )
     return is_ready
 
@@ -294,7 +298,8 @@ def main():
         header = "Text " + lines[1].strip().lower()
         note_id = lines[-1].strip().replace("note id ", "")
         body = '\n'.join(lines[3:-1]).strip()
-        scheduled_time = get_time(last_modified, text).strftime('%B %d, %Y %I:%M:%S %p')
+        send_time, _ = get_info(last_modified, text)
+        scheduled_time = send_time.strftime('%B %d, %Y %I:%M:%S %p')
         header = f'{header} {scheduled_time}'
         filename = f'{header}.txt'
 
@@ -322,7 +327,7 @@ def main():
             body = re_ref_imgs(body)
             body = re_ref_icloud(body)
             body = body.strip()
-            body = cf.protocol_translator(body, contact_name=contact_name)
+            send_time, body = get_info(last_modified, text)
             pr(body)
             print(body)
             f.write(body)

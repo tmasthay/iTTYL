@@ -29,5 +29,12 @@ addon(){
     cd $OLDPWD
 }
 
+rte(){
+    cd ~/Documents/repos/iTTYL
+    cd texts/sent
+    mv "$(ls -t | head -n 1)" ..
+    cd ../..
+    python send_scheduled_messages.py
+}
 
 
