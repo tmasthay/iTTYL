@@ -252,6 +252,9 @@ def re_ref_icloud(s):
     return s
 
 
+def strip_note_id(s):
+    return re.sub(r'note id x-coredata://.*', '', s)
+
 def main():
     with open('/tmp/calls_sync.txt', 'a') as mini_log:
         current_time = datetime.now()
@@ -324,13 +327,19 @@ def main():
             continue
 
         with open(path, 'w') as f:
-            body = re_ref_imgs(body)
-            body = re_ref_icloud(body)
-            body = body.strip()
-            send_time, body = get_info(last_modified, text)
-            pr(body)
-            print(body)
-            f.write(body)
+            # body = re_ref_imgs(body)
+            # body = re_ref_icloud(body)
+            # body = body.strip()
+            clean_text = re_ref_imgs(text)
+            
+            clean_text = re_ref_icloud(clean_text)
+            clean_text = strip_html_tags(clean_text)
+            clean_text = strip_note_id(clean_text)
+            clean_text = clean_text.strip()
+            send_time, formatted_text = get_info(last_modified, clean_text)
+            pr(formatted_text)
+            print(formatted_text)
+            f.write(formatted_text)
             os.system(move_note_cmd)
             print(f'File "{path}" created')
 

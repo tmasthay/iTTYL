@@ -309,7 +309,7 @@ class TimeProtocols:
 
         # Calculate the next occurrence of the target day of week
         days_ahead = target_day - last_modified_time.weekday()
-        if days_ahead <= 0:
+        if days_ahead < 0:
             days_ahead += 7
 
         # Create the next occurrence datetime object
@@ -433,13 +433,15 @@ class TransformProtocols:
         if time_str not in gm['people'][contact_name]['time']:
             time_str = 'closest'
 
-        week_jump = gm['people'][contact_name]['week_jump']
-        day_of_week = gm['people'][contact_name]['day']
-        time_of_day = gm['people'][contact_name]['time']
-        header = gm['people'][contact_name]['header']
-        width_pad = gm['people'][contact_name]['width_pad']
-        height_pad = gm['people'][contact_name]['height_pad']
-        raw_header = gm['people'][contact_name]['raw_header']
+        curr = {**gm['people']['default'], **gm['people'][contact_name]}
+
+        week_jump = curr['week_jump']
+        day_of_week = curr['day']
+        time_of_day = curr['time']
+        header = curr['header']
+        width_pad = curr['width_pad']
+        height_pad = curr['height_pad']
+        raw_header = curr['raw_header']
 
         send_time = TimeProtocols.leapfrog(
             last_modified_time=last_modified_time,
@@ -501,6 +503,14 @@ def main():
     @@@IMG 6@@@
     Here is another image.
     """
+
+    text = """
+    Me
+    gm
+    Hello 
+
+    Goodbye
+"""
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
     print("\n\n")
