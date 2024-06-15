@@ -220,6 +220,22 @@ class Helpers:
 
         return Helpers.fun_star_box_selected(edge_char, fill_char, header, iphone_width)
 
+    @staticmethod
+    def extract_top_info(text):
+        text = text.strip()
+        lines = text.split('\n')
+        if len(lines) <= 2:
+            return ""
+
+        contact_name, time_str = lines[:2]
+        contact_name = contact_name.lower().strip().replace(' ', '_')
+
+        text_body = '\n'.join(lines[2:])
+
+        return contact_name, time_str, text_body
+
+
+
 
 class FormatProtocols:
     @staticmethod
@@ -373,11 +389,11 @@ class TimeProtocols:
         print(f'{the_time=}')
 
         # add additional days as specified
-        the_time = the_time + datetime.timedelta(days=additional_days)
+        the_time = the_time + timedelta(days=additional_days)
 
         send_time = datetime.combine(
             today, the_time.time()
-        ) + datetime.timedelta(days=additional_days)
+        ) + timedelta(days=additional_days)
 
         print(f'{the_time=} {send_time=}')
 
@@ -406,7 +422,7 @@ class TimeProtocols:
             else int(time_string[hour_index + 1 : minute_index])
         )
 
-        u = last_modified_time + datetime.timedelta(
+        u = last_modified_time + timedelta(
             days=days, hours=hours, minutes=minutes
         )
         print(u)
@@ -458,7 +474,20 @@ class TransformProtocols:
             raw_header=raw_header
         )
         return send_time, reformatted_text
-
+    
+    # dummy method to attach different default custom times through YAML
+    @staticmethod
+    def general_mail_dummy1(last_modified_time, text):
+        return TransformProtocols.general_mail(last_modified_time, text)
+    
+    @staticmethod
+    def plus_raw_string(last_modified_time, text):
+        _, time_str, text_body = Helpers.extract_top_info(text)
+        send_time = TimeProtocols.plus(time_str, last_modified_time)
+        text_body = text_body.strip()
+        while '\n\n\n' in text_body:
+            text_body = text_body.replace('\n\n\n', '\n\n')
+        return send_time, text_body
 
 class TransformDispatcher:
     @staticmethod
@@ -475,6 +504,8 @@ class TransformDispatcher:
     @staticmethod
     def dispatch(last_modified_time, text_body):
         callback_id = text_body.strip().lower().split('\n')[1].strip()
+        if callback_id.startswith('+'):
+            callback_id = 'plus_raw_string'
         callback = TransformDispatcher.get_dispatch_method(callback_id)
         res = callback(last_modified_time, text_body)
         if '/' not in res[1]:
@@ -506,7 +537,7 @@ def main():
 
     text = """
     Me
-    gm
+    +10m
     Hello 
 
     Goodbye
@@ -514,9 +545,10 @@ def main():
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
     print("\n\n")
-    send_time, reformatted_text = TransformProtocols.general_mail(
-        last_modified_time, text
-    )
+
+    callback_method = TransformProtocols.general_mail
+    callback_method = TransformProtocols.plus_raw_string
+    send_time, reformatted_text = TransformDispatcher.dispatch(last_modified_time, text)
 
     print(f'{send_time=}\n')
     print(reformatted_text)
