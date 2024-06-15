@@ -446,8 +446,8 @@ class TransformProtocols:
         if contact_name not in gm['people'].keys():
             contact_name = 'default'
 
-        if time_str not in gm['people'][contact_name]['time']:
-            time_str = 'closest'
+        # if time_str not in gm['people'][contact_name]['time']:
+        #     time_str = 'closest'
 
         curr = {**gm['people']['default'], **gm['people'][contact_name]}
 
@@ -478,7 +478,56 @@ class TransformProtocols:
     # dummy method to attach different default custom times through YAML
     @staticmethod
     def general_mail_dummy1(last_modified_time, text):
-        return TransformProtocols.general_mail(last_modified_time, text)
+        # input('yo')
+        c = CustomTimesNamespace.cfg
+        text = text.strip()
+        lines = text.split('\n')
+        if len(lines) <= 2:
+            return ""
+
+        contact_name, time_str = lines[:2]
+        contact_name = contact_name.lower().strip()
+
+        gm = c['general_mail_dummy1']
+        # input(gm)
+
+        if contact_name not in gm['people'].keys():
+            contact_name = 'default'
+
+        # if time_str not in gm['people'][contact_name]['time']:
+        #     time_str = 'closest'
+
+        curr = {**gm['people']['default'], **gm['people'][contact_name]}
+
+        week_jump = curr['week_jump']
+        day_of_week = curr['day']
+        time_of_day = curr['time']
+        header = curr['header']
+        width_pad = curr['width_pad']
+        height_pad = curr['height_pad']
+        raw_header = curr['raw_header']
+        raw_text = curr['raw_text']
+
+        send_time = TimeProtocols.leapfrog(
+            last_modified_time=last_modified_time,
+            time_of_day=time_of_day,
+            day_of_week=day_of_week,
+            week_jump=week_jump,
+        )
+        if not raw_text:
+            reformatted_text = FormatProtocols.header_list(
+                '\n'.join(lines[2:]),
+                contact_name=contact_name,
+                header=header,
+                width_pad=width_pad,
+                height_pad=height_pad,
+                raw_header=raw_header
+            )
+        else:
+            reformatted_text = '\n'.join(lines[2:])
+            while '\n\n\n' in reformatted_text:
+                reformatted_text = reformatted_text.replace('\n\n\n', '\n\n')
+        return send_time, reformatted_text
     
     @staticmethod
     def plus_raw_string(last_modified_time, text):
@@ -537,7 +586,8 @@ def main():
 
     text = """
     Me
-    +10m
+    Tn
+
     Hello 
 
     Goodbye
