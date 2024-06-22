@@ -248,8 +248,23 @@ class Helpers:
         matches = re.findall(regex, text)
         for _, match in enumerate(matches):
             # img_path = f"{root}/{match}"
-            full_path = sco(f'find {root} -name "{match}*" | head -n 1')
-            text = text.replace(f"img:{match}", f"@@@IMG {full_path}@@@")
+            match_tokens = match.split('/')
+            match_file = match_tokens[-1]
+            match_dir = '/'.join(match_tokens[:-1])
+            full_root = os.path.join(root, match_dir)
+            cmd = f"""
+                find {full_root} -name "{match_file}*" |
+                awk '{{print gsub("/","/"), $0}}' | 
+                sort -k1,1n -k2 | 
+                cut -d' ' -f2- | 
+                head -n 1
+            """
+            # full_path = sco(f'find {full_root} -name "{match_file}*" | head -n 1')
+            full_path = sco(cmd)
+            if full_path is not None:
+                while '//' in full_path:
+                    full_path = full_path.replace('//', '/')
+                text = text.replace(f"img:{match}", f"@@@IMG {full_path}@@@")
         return text
 
 
@@ -611,7 +626,10 @@ def main():
     Gm
 
     Cuddles?
-    img:panda
+    img:lion
+    img:cud/lion
+    img:dog
+    img:cud/dog
 """
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
