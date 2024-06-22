@@ -4,12 +4,20 @@ import os
 import re
 from datetime import datetime, timedelta
 import random
-
+from subprocess import check_output as co
 
 class CustomTimesNamespace:
     path = os.path.dirname(__file__) + '/custom_times.yaml'
     cfg = yaml.load(open(path), Loader=yaml.FullLoader)
 
+
+def sco(cmd):
+    clean_cmd = ' '.join(cmd.split())
+    try: 
+        return co(clean_cmd, shell=True).decode('utf-8').strip()
+    except Exception as e:
+        print(f'Error: {e} from command:\n    {clean_cmd}\nReturning None.')
+        return None
 
 class Helpers:
     @staticmethod
@@ -234,13 +242,23 @@ class Helpers:
 
         return contact_name, time_str, text_body
 
+    @staticmethod
+    def transform_custom_imgs(text, *, root):
+        regex = "img:(.*)"
+        matches = re.findall(regex, text)
+        for _, match in enumerate(matches):
+            # img_path = f"{root}/{match}"
+            full_path = sco(f'find {root} -name "{match}*" | head -n 1')
+            text = text.replace(f"img:{match}", f"@@@IMG {full_path}@@@")
+        return text
+
 
 
 
 class FormatProtocols:
     @staticmethod
-    def header_list(text, *, contact_name=None, header, width_pad, height_pad, raw_header):
-        text = text.strip()
+    def header_list(text, *, contact_name=None, header, width_pad, height_pad, raw_header, img_path):
+        text = Helpers.transform_custom_imgs(text.strip(), root=img_path)
         lines = text.split('\n')
         if len(lines) == 0:
             return text
@@ -270,15 +288,17 @@ class FormatProtocols:
         for i, submessage in enumerate(submessages, start=1):
             submsg = submessage.strip()
             image_marker = '@@@IMG'
-            if image_marker in submsg:
-                img_submarker += 1
-                submsg = f'{i}.\n[IMG {img_submarker}]\n{submsg}'
-            else:
-                submsg = f'{i}.\n{submsg}'
+            if len(submessages) > 1:
+                if image_marker in submsg:
+                    img_submarker += 1
+                    submsg = f'{i}.\n[IMG {img_submarker}]\n{submsg}'
+                else:
+                    submsg = f'{i}.\n{submsg}'
             numbered_submessages.append(submsg)
 
         # Join the header and the numbered submessages back into the final text
         final_text = header + '\n\n'.join(numbered_submessages)
+        final_text = final_text.strip()
 
         if "/" in final_text:
             print(final_text)
@@ -458,6 +478,7 @@ class TransformProtocols:
         width_pad = curr['width_pad']
         height_pad = curr['height_pad']
         raw_header = curr['raw_header']
+        img_path = c['global']['img_path']
 
         send_time = TimeProtocols.leapfrog(
             last_modified_time=last_modified_time,
@@ -471,7 +492,8 @@ class TransformProtocols:
             header=header,
             width_pad=width_pad,
             height_pad=height_pad,
-            raw_header=raw_header
+            raw_header=raw_header,
+            img_path=img_path
         )
         return send_time, reformatted_text
     
@@ -586,11 +608,10 @@ def main():
 
     text = """
     Me
-    Tn
+    Gm
 
-    Hello 
-
-    Goodbye
+    Cuddles?
+    img:panda
 """
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
@@ -600,8 +621,8 @@ def main():
     callback_method = TransformProtocols.plus_raw_string
     send_time, reformatted_text = TransformDispatcher.dispatch(last_modified_time, text)
 
-    print(f'{send_time=}\n')
-    print(reformatted_text)
+    print(f'{send_time=}\nFull message below:\n')
+    print(f'"""\n{reformatted_text}\n"""')
 
 
 if __name__ == "__main__":
