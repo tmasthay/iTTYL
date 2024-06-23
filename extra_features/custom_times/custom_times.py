@@ -244,6 +244,7 @@ class Helpers:
 
     @staticmethod
     def transform_custom_imgs(text, *, root):
+        text = text.replace('Img:', 'img:')
         regex = "img:(.*)"
         matches = re.findall(regex, text)
         for _, match in enumerate(matches):
@@ -568,9 +569,11 @@ class TransformProtocols:
     
     @staticmethod
     def plus_raw_string(last_modified_time, text):
+        cfg = CustomTimesNamespace.cfg
         _, time_str, text_body = Helpers.extract_top_info(text)
         send_time = TimeProtocols.plus(time_str, last_modified_time)
         text_body = text_body.strip()
+        text_body = Helpers.transform_custom_imgs(text_body, root=cfg['global']['img_path'])
         while '\n\n\n' in text_body:
             text_body = text_body.replace('\n\n\n', '\n\n')
         return send_time, text_body
