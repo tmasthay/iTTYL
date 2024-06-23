@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import random
 from subprocess import check_output as co
 
+
 class CustomTimesNamespace:
     path = os.path.dirname(__file__) + '/custom_times.yaml'
     cfg = yaml.load(open(path), Loader=yaml.FullLoader)
@@ -13,13 +14,50 @@ class CustomTimesNamespace:
 
 def sco(cmd):
     clean_cmd = ' '.join(cmd.split())
-    try: 
+    try:
         return co(clean_cmd, shell=True).decode('utf-8').strip()
     except Exception as e:
         print(f'Error: {e} from command:\n    {clean_cmd}\nReturning None.')
         return None
 
+
 class Helpers:
+    @staticmethod
+    def convert_time(s):
+        s = s.lower().strip()
+        if s == 'now':
+            return s
+        if ':' not in s:
+            s = s.replace('am', ':00am').replace('pm', ':00pm')
+            if 'am' not in s and 'pm' not in s:
+                if int(s) > 12:
+                    s += ':00'
+                else:
+                    s += ':00am'
+        try:
+            time_obj = datetime.strptime(s, "%I:%M%p")
+        except ValueError:
+            time_obj = datetime.strptime(s, "%H:%M")
+            # if time_obj.hour > 12:
+            #     time_obj = time_obj.replace(hour=time_obj.hour % 12)
+        return time_obj.strftime("%I:%M %p")
+
+    
+    @staticmethod
+    def conform_types(d):
+        for k, v in d.items():
+            if type(v) != str:
+                continue
+            if v.lower() in ['true', 'false']:
+                d[k] = v.lower() == 'true'
+            elif v.isdigit():
+                d[k] = int(v)
+        return d
+    
+    @staticmethod
+    def subdict(d, keys):
+        return {k: d[k] for k in keys}
+
     @staticmethod
     def star_box(heading, spaces, line_width):
         if heading is None:
@@ -71,7 +109,7 @@ class Helpers:
             [border, empty_line] + heading_lines + [empty_line, border]
         )
 
-        # valid_star_emojis = ["😍", "🐕", "🥺"] 
+        # valid_star_emojis = ["😍", "🐕", "🥺"]
         # valid_space_emojis = ["🐭", "🤩", "🐶"]
         valid_star_emojis = ['*']
         valid_space_emojis = ['.']
@@ -204,7 +242,12 @@ class Helpers:
             extra_emojis = int(0.5 * len(token))
             if fill_char == '.':
                 extra_emojis = 0
-            meat_line += Helpers.make_line(edge_char, fill_char, token, line_width + extra_emojis) + "\n"
+            meat_line += (
+                Helpers.make_line(
+                    edge_char, fill_char, token, line_width + extra_emojis
+                )
+                + "\n"
+            )
 
         s = (
             top_border
@@ -226,7 +269,9 @@ class Helpers:
         edge_char = Helpers.get_rand_elem(edge_char_choices)
         fill_char = Helpers.get_rand_elem(fill_char_choices)
 
-        return Helpers.fun_star_box_selected(edge_char, fill_char, header, iphone_width)
+        return Helpers.fun_star_box_selected(
+            edge_char, fill_char, header, iphone_width
+        )
 
     @staticmethod
     def extract_top_info(text):
@@ -269,11 +314,18 @@ class Helpers:
         return text
 
 
-
-
 class FormatProtocols:
     @staticmethod
-    def header_list(text, *, contact_name=None, header, width_pad, height_pad, raw_header, img_path):
+    def header_list(
+        text,
+        *,
+        contact_name=None,
+        header,
+        width_pad,
+        height_pad,
+        raw_header,
+        img_path,
+    ):
         text = Helpers.transform_custom_imgs(text.strip(), root=img_path)
         lines = text.split('\n')
         if len(lines) == 0:
@@ -283,7 +335,14 @@ class FormatProtocols:
         iphone_width = 26
         # header = Helpers.weird_star_box(header, width_pad, iphone_width) + '\n\n'
         if not raw_header:
-            header = Helpers.fun_star_box(header, width_pad, iphone_width) + '\n\n'
+            header = (
+                Helpers.fun_star_box(header, width_pad, iphone_width) + '\n\n'
+            )
+
+        while not header.endswith('\n\n'):
+            header += '\n'
+        while header.endswith('\n\n\n'):
+            header = header[:-1]
 
         # Ensure the first line is "DAILY MAILLY"
         # if not lines[0].startswith('DAILY MAILLY'):
@@ -323,14 +382,14 @@ class FormatProtocols:
 
 class TimeProtocols:
     @staticmethod
-    def leapfrog(last_modified_time, *, time_of_day, day_of_week, week_jump):
+    def leapfrog(last_modified_time, *, time, day, week_jump):
         # Parse the input strings into datetime objects
         # last_modified_time = datetime.strptime(last_modified_time, "%A %B %d, %Y %I:%M %p")
-        if time_of_day.lower() == "now":
-            time_of_day_dt = datetime.now().time()
+        if time.lower() == "now":
+            time_dt = datetime.now().time()
         else:
-            time_of_day_dt = datetime.strptime(time_of_day, "%I:%M %p").time()
-        day_of_week_map = {
+            time_dt = datetime.strptime(time, "%I:%M %p").time()
+        day_map = {
             "monday": 0,
             "tuesday": 1,
             "wednesday": 2,
@@ -341,9 +400,9 @@ class TimeProtocols:
         }
 
         # Handle the special case for 'closest'
-        if day_of_week.lower() == "closest":
+        if day.lower() == "closest":
             today_occurrence = datetime.combine(
-                last_modified_time.date(), time_of_day_dt
+                last_modified_time.date(), time_dt
             )
             if today_occurrence > last_modified_time:
                 res = today_occurrence
@@ -353,11 +412,11 @@ class TimeProtocols:
                 res += timedelta(days=7 * week_jump)
             return res
 
-        if day_of_week.lower() == "now":
+        if day.lower() == "now":
             return datetime.now()
 
         # Find the target day of week as an integer
-        target_day = day_of_week_map[day_of_week.lower()]
+        target_day = day_map[day.lower()]
 
         # Calculate the next occurrence of the target day of week
         days_ahead = target_day - last_modified_time.weekday()
@@ -366,9 +425,7 @@ class TimeProtocols:
 
         # Create the next occurrence datetime object
         next_occurrence_date = last_modified_time + timedelta(days=days_ahead)
-        next_occurrence = datetime.combine(
-            next_occurrence_date.date(), time_of_day_dt
-        )
+        next_occurrence = datetime.combine(next_occurrence_date.date(), time_dt)
 
         # If the calculated next occurrence is before or at the last modified time, add 7 days
         if next_occurrence <= last_modified_time:
@@ -427,9 +484,9 @@ class TimeProtocols:
         # add additional days as specified
         the_time = the_time + timedelta(days=additional_days)
 
-        send_time = datetime.combine(
-            today, the_time.time()
-        ) + timedelta(days=additional_days)
+        send_time = datetime.combine(today, the_time.time()) + timedelta(
+            days=additional_days
+        )
 
         print(f'{the_time=} {send_time=}')
 
@@ -474,7 +531,7 @@ class TransformProtocols:
         if len(lines) <= 2:
             return ""
 
-        contact_name, time_str = lines[:2]
+        contact_name, prot_str = lines[:2]
         contact_name = contact_name.lower().strip()
 
         gm = c['general_mail']
@@ -485,38 +542,43 @@ class TransformProtocols:
         # if time_str not in gm['people'][contact_name]['time']:
         #     time_str = 'closest'
 
-        curr = {**gm['people']['default'], **gm['people'][contact_name]}
+        _, *tokens = prot_str.split()
+        tokens = dict(e.split('=') for e in tokens)
+        for k, v in gm.get('key_remap', {}).items():
+            if k in tokens:
+                tokens[v] = tokens.pop(k)
 
-        week_jump = curr['week_jump']
-        day_of_week = curr['day']
-        time_of_day = curr['time']
-        header = curr['header']
-        width_pad = curr['width_pad']
-        height_pad = curr['height_pad']
-        raw_header = curr['raw_header']
-        img_path = c['global']['img_path']
+        value_remap = gm.get('value_remap', {})
+        for k, v in value_remap.items():
+            tokens[k] = v.get(tokens[k], tokens[k])
+
+        curr = {
+            **gm['people']['default'],
+            **gm['people'][contact_name],
+            **tokens,
+        }
+
+        curr['time'] = Helpers.convert_time(curr['time'])
+        curr = Helpers.conform_types(curr)
 
         send_time = TimeProtocols.leapfrog(
             last_modified_time=last_modified_time,
-            time_of_day=time_of_day,
-            day_of_week=day_of_week,
-            week_jump=week_jump,
+            **Helpers.subdict(curr, ['time', 'day', 'week_jump']),
         )
         reformatted_text = FormatProtocols.header_list(
             '\n'.join(lines[2:]),
+            img_path=c['global']['img_path'],
             contact_name=contact_name,
-            header=header,
-            width_pad=width_pad,
-            height_pad=height_pad,
-            raw_header=raw_header,
-            img_path=img_path
+            **Helpers.subdict(
+                curr, ['header', 'width_pad', 'height_pad', 'raw_header']
+            ),
         )
+
         return send_time, reformatted_text
-    
+
     # dummy method to attach different default custom times through YAML
     @staticmethod
     def general_mail_dummy1(last_modified_time, text):
-        # input('yo')
         c = CustomTimesNamespace.cfg
         text = text.strip()
         lines = text.split('\n')
@@ -527,7 +589,6 @@ class TransformProtocols:
         contact_name = contact_name.lower().strip()
 
         gm = c['general_mail_dummy1']
-        # input(gm)
 
         if contact_name not in gm['people'].keys():
             contact_name = 'default'
@@ -559,24 +620,27 @@ class TransformProtocols:
                 header=header,
                 width_pad=width_pad,
                 height_pad=height_pad,
-                raw_header=raw_header
+                raw_header=raw_header,
             )
         else:
             reformatted_text = '\n'.join(lines[2:])
             while '\n\n\n' in reformatted_text:
                 reformatted_text = reformatted_text.replace('\n\n\n', '\n\n')
         return send_time, reformatted_text
-    
+
     @staticmethod
     def plus_raw_string(last_modified_time, text):
         cfg = CustomTimesNamespace.cfg
         _, time_str, text_body = Helpers.extract_top_info(text)
         send_time = TimeProtocols.plus(time_str, last_modified_time)
         text_body = text_body.strip()
-        text_body = Helpers.transform_custom_imgs(text_body, root=cfg['global']['img_path'])
+        text_body = Helpers.transform_custom_imgs(
+            text_body, root=cfg['global']['img_path']
+        )
         while '\n\n\n' in text_body:
             text_body = text_body.replace('\n\n\n', '\n\n')
         return send_time, text_body
+
 
 class TransformDispatcher:
     @staticmethod
@@ -592,9 +656,11 @@ class TransformDispatcher:
 
     @staticmethod
     def dispatch(last_modified_time, text_body):
-        callback_id = text_body.strip().lower().split('\n')[1].strip()
-        if callback_id.startswith('+'):
-            callback_id = 'plus_raw_string'
+        callback_id_full = text_body.strip().lower().split('\n')[1].strip()
+        if callback_id_full.startswith('+'):
+            callback_id_full = 'plus_raw_string'
+
+        callback_id = callback_id_full.split()[0]
         callback = TransformDispatcher.get_dispatch_method(callback_id)
         res = callback(last_modified_time, text_body)
         if '/' not in res[1]:
@@ -625,8 +691,8 @@ def main():
     """
 
     text = """
-    Me
-    Gm
+    Scar
+    Gm t=now h=idmm
 
     Cuddles?
     img:lion
@@ -640,7 +706,9 @@ def main():
 
     callback_method = TransformProtocols.general_mail
     callback_method = TransformProtocols.plus_raw_string
-    send_time, reformatted_text = TransformDispatcher.dispatch(last_modified_time, text)
+    send_time, reformatted_text = TransformDispatcher.dispatch(
+        last_modified_time, text
+    )
 
     print(f'{send_time=}\nFull message below:\n')
     print(f'"""\n{reformatted_text}\n"""')
