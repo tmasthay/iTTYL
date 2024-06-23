@@ -307,10 +307,12 @@ class Helpers:
             """
             # full_path = sco(f'find {full_root} -name "{match_file}*" | head -n 1')
             full_path = sco(cmd)
-            if full_path is not None:
+            if full_path:
                 while '//' in full_path:
                     full_path = full_path.replace('//', '/')
                 text = text.replace(f"img:{match}", f"@@@IMG {full_path}@@@")
+            else:
+                text = text.replace(f"img:{match}", f"***Image \"{match}\" not found***")
         return text
 
 
@@ -691,14 +693,10 @@ def main():
     """
 
     text = """
-    Scar
-    Gm t=now h=idmm
+Scar
+Gm t=now h=dm
 
-    Cuddles?
-    img:lion
-    img:cud/lion
-    img:dog
-    img:cud/dog
+Should see an international daily mailly for the night time. 
 """
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
