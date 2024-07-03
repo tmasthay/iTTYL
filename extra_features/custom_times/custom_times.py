@@ -10,7 +10,8 @@ from subprocess import check_output as co
 class CustomTimesNamespace:
     path = os.path.dirname(__file__) + '/custom_times.yaml'
     cfg = yaml.load(open(path), Loader=yaml.FullLoader)
-
+    for k, v in cfg["emojis"].items():
+        cfg["emojis"][k] = ''.join(v.split())
 
 def sco(cmd):
     clean_cmd = ' '.join(cmd.split())
@@ -19,7 +20,6 @@ def sco(cmd):
     except Exception as e:
         print(f'Error: {e} from command:\n    {clean_cmd}\nReturning None.')
         return None
-
 
 class Helpers:
     @staticmethod
@@ -34,6 +34,8 @@ class Helpers:
                     s += ':00'
                 else:
                     s += ':00am'
+        while ' ' in s:
+            s = s.replace(' ', '')
         try:
             time_obj = datetime.strptime(s, "%I:%M%p")
         except ValueError:
@@ -53,6 +55,71 @@ class Helpers:
             elif v.isdigit():
                 d[k] = int(v)
         return d
+    
+    @staticmethod
+    def expand_emojis(s):
+        d = CustomTimesNamespace.cfg["emojis"]
+        
+        def select_emojis(count, categories, selection_type):
+            emojis = []
+
+            if selection_type == 'choice':
+                selection_type = random.choice(['same', 'rand'])
+            
+            if categories == "choice":
+                if selection_type == "same":
+                    categories = "once|rand"
+                else:
+                    categories = random.choice(["once|rand", "rand"])
+
+
+            if categories == 'rand':
+                categories = list(d.keys())
+            else:
+                categories = categories.split('|')
+            
+            if 'once' in categories:
+                categories.remove('once')
+                if 'rand' in categories:
+                    categories = list(d.keys())
+                category = random.choice(categories)
+                if selection_type == 'same':
+                    emoji = random.choice(d[category])
+                    emojis = [emoji] * count
+                else:
+                    emojis = random.sample(d[category], count)
+            else:
+                if selection_type == 'choice':
+                    # randomly select 'same' or 'rand'
+                    selection_type = random.choice(['same', 'rand'])
+                if selection_type == 'same':
+                    if 'rand' in categories:
+                        category = random.choice(list(d.keys()))
+                    else:
+                        category = random.choice(categories)
+                    emoji = random.choice(d[category])
+                    emojis = [emoji] * count
+                else:
+                    for _ in range(count):
+                        if 'rand' in categories:
+                            category = random.choice(list(d.keys()))
+                        else:
+                            category = random.choice(categories)
+                        emoji = random.choice(d[category])
+                        emojis.append(emoji)
+            
+            return ''.join(emojis)
+        
+        def replacer(match):
+            parts = match.group(0).split(':')
+            count = int(parts[1])
+            categories = parts[2]
+            selection_type = parts[3]
+            return select_emojis(count, categories, selection_type)
+        
+        pattern = r'@EMOJI:\d+:[a-z|]+:[a-z]+'
+        return re.sub(pattern, replacer, s)
+
     
     @staticmethod
     def subdict(d, keys):
@@ -375,6 +442,7 @@ class FormatProtocols:
 
         # Join the header and the numbered submessages back into the final text
         final_text = header + '\n\n'.join(numbered_submessages)
+        final_text = Helpers.expand_emojis(final_text)
         final_text = final_text.strip()
 
         if "/" in final_text:
@@ -551,8 +619,11 @@ class TransformProtocols:
                 tokens[v] = tokens.pop(k)
 
         value_remap = gm.get('value_remap', {})
+        print(value_remap)
+        print(tokens)
         for k, v in value_remap.items():
-            tokens[k] = v.get(tokens[k], tokens[k])
+            if k in tokens:
+                tokens[k] = v.get(tokens[k], tokens[k])
 
         curr = {
             **gm['people']['default'],
@@ -601,8 +672,8 @@ class TransformProtocols:
         curr = {**gm['people']['default'], **gm['people'][contact_name]}
 
         week_jump = curr['week_jump']
-        day_of_week = curr['day']
-        time_of_day = curr['time']
+        day = curr['day']
+        time = curr['time']
         header = curr['header']
         width_pad = curr['width_pad']
         height_pad = curr['height_pad']
@@ -611,8 +682,8 @@ class TransformProtocols:
 
         send_time = TimeProtocols.leapfrog(
             last_modified_time=last_modified_time,
-            time_of_day=time_of_day,
-            day_of_week=day_of_week,
+            time=time,
+            day=day,
             week_jump=week_jump,
         )
         if not raw_text:
@@ -694,7 +765,7 @@ def main():
 
     text = """
 Scar
-Gm t=now h=dm
+Gm t=now h=sem
 
 Should see an international daily mailly for the night time. 
 """
