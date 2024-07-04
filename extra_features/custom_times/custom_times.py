@@ -87,7 +87,7 @@ class Helpers:
                     emoji = random.choice(d[category])
                     emojis = [emoji] * count
                 else:
-                    emojis = random.sample(d[category], count)
+                    emojis = random.choices(d[category], k=count)
             else:
                 if selection_type == 'choice':
                     # randomly select 'same' or 'rand'
@@ -723,12 +723,12 @@ def main():
     """
 
     text = """
-Bryce
-Tn h=bn
+Me
+Tn t=5pm h=hsc
 
-Should see an international daily mailly for the night time. 
+Planet fitness?
 
-Second guy.
+Acts of service?
 """
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
