@@ -717,7 +717,7 @@ def main():
 
     text = """
 Me
-Gm t=5pm h=tmr
+Gm t=5pm h=hsc
 
 test
 """
