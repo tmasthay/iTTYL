@@ -625,17 +625,10 @@ class TransformProtocols:
                 tokens[v] = tokens.pop(k)
 
         value_remap = gm.get('value_remap', {})
-        print(value_remap)
-        print(tokens)
-        for k, v in value_remap.items():
-            if k in tokens:
-                tokens[k] = v.get(tokens[k], tokens[k])
-
-        curr = {
-            **gm['people']['default'],
-            **gm['people'][contact_name],
-            **tokens,
-        }
+        curr = {**gm['people']['default'], **gm['people'][contact_name], **tokens}
+        for curr_k, curr_v in curr.items():
+            if curr_v in value_remap.get(curr_k, {}):
+                curr[curr_k] = value_remap[curr_k][curr_v]
 
         curr['time'] = Helpers.convert_time(curr['time'])
         curr = Helpers.conform_types(curr)
@@ -724,7 +717,7 @@ def main():
 
     text = """
 Me
-Tn t=5pm h=hsc
+Gm t=5pm 
 
 Planet fitness?
 
