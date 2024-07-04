@@ -717,11 +717,9 @@ def main():
 
     text = """
 Me
-Gm t=5pm h=bn
+Gm t=5pm h=tmr
 
-Planet fitness?
-
-Acts of service?
+test
 """
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
