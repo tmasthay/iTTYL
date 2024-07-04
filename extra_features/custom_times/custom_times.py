@@ -394,6 +394,7 @@ class FormatProtocols:
         height_pad,
         raw_header,
         img_path,
+        raw_text
     ):
         text = Helpers.transform_custom_imgs(text.strip(), root=img_path)
         lines = text.split('\n')
@@ -427,23 +428,28 @@ class FormatProtocols:
         submessages = text.split('\n\n')
 
         # Create a numbered list from the submessages
-        numbered_submessages = []
-        img_submarker = 0
-        for i, submessage in enumerate(submessages, start=1):
-            submsg = submessage.strip()
-            image_marker = '@@@IMG'
-            if len(submessages) > 1:
-                if image_marker in submsg:
-                    img_submarker += 1
-                    submsg = f'{i}.\n[IMG {img_submarker}]\n{submsg}'
-                else:
-                    submsg = f'{i}.\n{submsg}'
-            numbered_submessages.append(submsg)
+        if not raw_text:
+            numbered_submessages = []
+            img_submarker = 0
+            for i, submessage in enumerate(submessages, start=1):
+                submsg = submessage.strip()
+                image_marker = '@@@IMG'
+                if len(submessages) > 1:
+                    if image_marker in submsg:
+                        img_submarker += 1
+                        submsg = f'{i}.\n[IMG {img_submarker}]\n{submsg}'
+                    else:
+                        submsg = f'{i}.\n{submsg}'
+                numbered_submessages.append(submsg)
 
-        # Join the header and the numbered submessages back into the final text
-        final_text = header + '\n\n'.join(numbered_submessages)
+            # Join the header and the numbered submessages back into the final text
+            final_text = header + '\n\n'.join(numbered_submessages)
+        else:
+            final_text = header + '\n\n' + text
         final_text = Helpers.expand_emojis(final_text)
         final_text = final_text.strip()
+        while '\n\n\n' in final_text:
+            final_text = final_text.replace('\n\n\n', '\n\n')
 
         if "/" in final_text:
             print(final_text)
@@ -594,7 +600,7 @@ class TimeProtocols:
 
 class TransformProtocols:
     @staticmethod
-    def general_mail(last_modified_time, text):
+    def general_mail(last_modified_time, text, entry_key='general_mail'):
         c = CustomTimesNamespace.cfg
         text = text.strip()
         lines = text.split('\n')
@@ -604,7 +610,7 @@ class TransformProtocols:
         contact_name, prot_str = lines[:2]
         contact_name = contact_name.lower().strip()
 
-        gm = c['general_mail']
+        gm = c[entry_key]
 
         if contact_name not in gm['people'].keys():
             contact_name = 'default'
@@ -643,7 +649,7 @@ class TransformProtocols:
             img_path=c['global']['img_path'],
             contact_name=contact_name,
             **Helpers.subdict(
-                curr, ['header', 'width_pad', 'height_pad', 'raw_header']
+                curr, ['header', 'width_pad', 'height_pad', 'raw_header', 'raw_text']
             ),
         )
 
@@ -651,55 +657,8 @@ class TransformProtocols:
 
     # dummy method to attach different default custom times through YAML
     @staticmethod
-    def general_mail_dummy1(last_modified_time, text):
-        c = CustomTimesNamespace.cfg
-        text = text.strip()
-        lines = text.split('\n')
-        if len(lines) <= 2:
-            return ""
-
-        contact_name, time_str = lines[:2]
-        contact_name = contact_name.lower().strip()
-
-        gm = c['general_mail_dummy1']
-
-        if contact_name not in gm['people'].keys():
-            contact_name = 'default'
-
-        # if time_str not in gm['people'][contact_name]['time']:
-        #     time_str = 'closest'
-
-        curr = {**gm['people']['default'], **gm['people'][contact_name]}
-
-        week_jump = curr['week_jump']
-        day = curr['day']
-        time = curr['time']
-        header = curr['header']
-        width_pad = curr['width_pad']
-        height_pad = curr['height_pad']
-        raw_header = curr['raw_header']
-        raw_text = curr['raw_text']
-
-        send_time = TimeProtocols.leapfrog(
-            last_modified_time=last_modified_time,
-            time=time,
-            day=day,
-            week_jump=week_jump,
-        )
-        if not raw_text:
-            reformatted_text = FormatProtocols.header_list(
-                '\n'.join(lines[2:]),
-                contact_name=contact_name,
-                header=header,
-                width_pad=width_pad,
-                height_pad=height_pad,
-                raw_header=raw_header,
-            )
-        else:
-            reformatted_text = '\n'.join(lines[2:])
-            while '\n\n\n' in reformatted_text:
-                reformatted_text = reformatted_text.replace('\n\n\n', '\n\n')
-        return send_time, reformatted_text
+    def tonight(last_modified_time, text):
+        return TransformProtocols.general_mail(last_modified_time, text, entry_key='tonight')
 
     @staticmethod
     def plus_raw_string(last_modified_time, text):
@@ -764,10 +723,12 @@ def main():
     """
 
     text = """
-Scar
-Gm t=now h=sem
+Bryce
+Tn h=bn
 
 Should see an international daily mailly for the night time. 
+
+Second guy.
 """
     text = '\n'.join([e.strip() for e in text.strip().split('\n')])
     last_modified_time = datetime.now()
