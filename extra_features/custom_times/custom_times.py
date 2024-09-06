@@ -689,7 +689,8 @@ class TransformDispatcher:
         callback = TransformDispatcher.get_dispatch_method(callback_id)
         res = callback(last_modified_time, text_body)
         if '/' not in res[1]:
-            print(res[1])
+            # print(res[1])
+            print(f'res="{res}"')
         return res
 
 
@@ -717,7 +718,7 @@ def main():
 
     text = """
 Me
-Gm t=5pm h=hsc
+Gm t=now h=tb
 
 test
 """
