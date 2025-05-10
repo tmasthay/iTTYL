@@ -145,8 +145,8 @@ def get_info(last_modified, text_body):
     true_text_body = '\n'.join([e for e in lines if not e.startswith('note id x-coredata://')])
     if '/' not in true_text_body:
         print(true_text_body)
-    transformed_text, send_time = ct.TransformDispatcher.dispatch(last_modified_time, true_text_body)
-    return transformed_text, send_time
+    send_time, transformed_text = ct.TransformDispatcher.dispatch(last_modified_time, true_text_body)
+    return send_time, transformed_text
 
 def text_ready(last_modified, text_body, only_if_ready):
     pr('TEXT_READY CALL')
@@ -292,57 +292,68 @@ def main():
         return
 
     for i, text in enumerate(texts):
-        lines = text.strip().split('\n')
-        last_modified = lines[0].split(' ')[1:]
-        last_modified = ' '.join(last_modified).replace('at ', '')
-        ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
+        try: 
+            lines = text.strip().split('\n')
+            last_modified = lines[0].split(' ')[1:]
+            last_modified = ' '.join(last_modified).replace('at ', '')
+            ref_time = datetime.strptime(last_modified, '%B %d, %Y %I:%M:%S %p')
 
-        contact_name = lines[1].strip().lower()
-        header = "Text " + lines[1].strip().lower()
-        note_id = lines[-1].strip().replace("note id ", "")
-        body = '\n'.join(lines[3:-1]).strip()
-        send_time, _ = get_info(last_modified, text)
-        scheduled_time = send_time.strftime('%B %d, %Y %I:%M:%S %p')
-        header = f'{header} {scheduled_time}'
-        filename = f'{header}.txt'
+            contact_name = lines[1].strip().lower()
+            if contact_name[-1] in ['.', '@']:
+                true_only_if_ready = False
+                contact_name = contact_name[:-1]
+            else:
+                true_only_if_ready = only_if_ready
+            # input(f'{true_only_if_ready=}, {contact_name=}, {last_modified=}')
+            header = "Text " + contact_name
+            note_id = lines[-1].strip().replace("note id ", "")
+            body = '\n'.join(lines[3:-1]).strip()
+            send_time, _ = get_info(last_modified, text)
+            scheduled_time = send_time.strftime('%B %d, %Y %I:%M:%S %p')
+            header = f'{header} {scheduled_time}'
+            filename = f'{header}.txt'
 
-        if not text_ready(last_modified, text, only_if_ready=only_if_ready):
-            # print(f'Text {i+1} not ready. Skipping...')
-            continue
+            if not text_ready(last_modified, text, only_if_ready=true_only_if_ready):
+                # print(f'Text {i+1} not ready. Skipping...')
+                # input('Not ready.')
+                continue
 
-        pr(filename)
-        path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, filename)
-        sent_path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, 'sent', filename)
-        move_note_cmd = f'osascript extra_features/sync_notes/move_note.applescript "{note_id}"'
-        print(note_id)
-        if os.path.exists(sent_path):
-            print(
-                f'File "{sent_path}" already exists, meaning message has already been sent. Skipping...'
-            )
-            os.system(move_note_cmd)
-            continue
-        if os.path.exists(path):
-            print(f'File "{path}" already exists. Skipping...')
-            os.system(move_note_cmd)
-            continue
+            pr(filename)
+            path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, filename)
+            sent_path = os.path.join(SCHEDULED_TEXTS_DIRECTORY, 'sent', filename)
+            move_note_cmd = f'osascript extra_features/sync_notes/move_note.applescript "{note_id}"'
+            print(note_id)
+            if os.path.exists(sent_path):
+                print(
+                    f'File "{sent_path}" already exists, meaning message has already been sent. Skipping...'
+                )
+                os.system(move_note_cmd)
+                continue
+            if os.path.exists(path):
+                print(f'File "{path}" already exists. Skipping...')
+                os.system(move_note_cmd)
+                continue
 
-        with open(path, 'w') as f:
-            # body = re_ref_imgs(body)
-            # body = re_ref_icloud(body)
-            # body = body.strip()
-            clean_text = re_ref_imgs(text)
-            
-            clean_text = re_ref_icloud(clean_text)
-            clean_text = strip_html_tags(clean_text)
-            clean_text = strip_note_id(clean_text)
-            clean_text = clean_text.strip()
-            send_time, formatted_text = get_info(last_modified, clean_text)
-            pr(formatted_text)
-            print(formatted_text)
-            f.write(formatted_text)
-            os.system(move_note_cmd)
-            print(f'File "{path}" created')
-
+            with open(path, 'w') as f:
+                # body = re_ref_imgs(body)
+                # body = re_ref_icloud(body)
+                # body = body.strip()
+                clean_text = re_ref_imgs(text)
+                
+                clean_text = re_ref_icloud(clean_text)
+                clean_text = strip_html_tags(clean_text)
+                clean_text = strip_note_id(clean_text)
+                clean_text = clean_text.strip()
+                send_time, formatted_text = get_info(last_modified, clean_text)
+                pr(formatted_text)
+                print(formatted_text)
+                f.write(formatted_text)
+                os.system(move_note_cmd)
+                print(f'File "{path}" created')
+        except Exception as e:
+            pr(f'Error occurred while processing text {i+1}: {e}')
+            print(f'Error occurred while processing text {i+1}: {e}')
+            continue 
 
 if __name__ == "__main__":
     try:
